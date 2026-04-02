@@ -8,7 +8,8 @@ CLAUDE_DIR="$HOME/.claude"
 
 # Files to sync (relative to their root dirs)
 FILES="statusline.pl CLAUDE.md sync-export.sh sensitive-check.sh"
-SKILL_FILES="skills/refresh/SKILL.md skills/backup/SKILL.md"
+SKILL_FILES="skills/refresh/SKILL.md skills/backup/SKILL.md skills/sandbox/SKILL.md"
+CONTAINER_FILES="container-config/Dockerfile container-config/claude-sandbox.sh container-config/claude-sandbox.cmd container-config/CLAUDE.md container-config/settings.json"
 
 check_file() {
   local name="$1"
@@ -38,7 +39,7 @@ check_file() {
 
 echo "["
 FIRST=1
-for f in $FILES $SKILL_FILES; do
+for f in $FILES $SKILL_FILES $CONTAINER_FILES; do
   RESULT=$(check_file "$f")
   if [ -n "$RESULT" ]; then
     [ "$FIRST" -eq 1 ] && FIRST=0 || echo ","

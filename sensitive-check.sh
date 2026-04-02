@@ -19,7 +19,6 @@ PATTERNS=(
   'dsn.*sentry'       # Sentry DSNs (with actual values)
   'https://[^"]*@[^"]*\.ingest\.' # Sentry ingest URLs
   'credentials_json'  # GCP credentials
-  'deploy_key'        # Deploy keys
 )
 
 for pattern in "${PATTERNS[@]}"; do

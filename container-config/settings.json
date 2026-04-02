@@ -1,0 +1,12 @@
+{
+  "env": {
+    "MAX_THINKING_TOKENS": "50000",
+    "DISABLE_AUTOUPDATER": "1"
+  },
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "medium",
+  "statusLine": {
+    "type": "command",
+    "command": "perl \"$HOME/.claude/statusline.pl\""
+  }
+}
