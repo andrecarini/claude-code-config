@@ -14,16 +14,17 @@ You have full autonomy. No permission prompts. Go fast.
 - ✅ `pip install`, `python`, `cargo`, `go build`
 - ✅ `firebase`, `gcloud`, `terraform`
 - ✅ ANY build tool, linter, formatter, or compiler
-- ✅ `apt-get install` for additional system packages
+- ✅ `apt-get install` for additional system packages and runtimes (Node.js, Python, etc.)
 
 There is no host machine to protect — this container IS the sandbox.
-Worst case, the container gets trashed. Project files are git-recoverable.
+Worst case, the container gets recreated. Project files are bind-mounted and git-recoverable.
 
 ## ⚠️ SUPPLY CHAIN SECURITY (still applies inside the container)
 
 Even inside a container, supply chain attacks can exfiltrate project source code and credentials. Minimize the attack surface:
 
-- **npm `ignore-scripts=true` is set globally** in this container. Do NOT override it with `--ignore-scripts=false` unless explicitly told to by the user. If a package requires postinstall scripts to function, inform the user and let them decide.
+- **`npm_config_ignore_scripts=true` is set as an environment variable.** This blocks npm postinstall hooks globally. Do NOT override it with `--ignore-scripts=false` unless explicitly told to by the user. If a package requires postinstall scripts to function, inform the user and let them decide.
+- **When installing any package manager**, set its equivalent security protections (e.g. pip `--no-build-isolation` where appropriate).
 - **Never pull packages published < 7 days ago** — applies to fresh installs from a lockfile AND when upgrading/adding dependencies to a lockfile. If you notice a dependency was published very recently, flag it.
 - **Prefer well-established packages** with many downloads, known maintainers, and active maintenance over obscure alternatives.
 - Same caution applies to `pip install`, `cargo install`, `pub get`, etc.
@@ -33,12 +34,12 @@ Even inside a container, supply chain attacks can exfiltrate project source code
 - Local git operations (add, commit, diff, log, status, branch, etc.) work normally
 - For push/pull to private repos: if a deploy key exists in the project folder, use:
   `GIT_SSH_COMMAND="ssh -i /project/deploy_key -o StrictHostKeyChecking=no" git push`
-- If `$GIT_SSH_COMMAND` is already set in the environment, git push/pull should just work
+- If `$GIT_SSH_COMMAND` or `$GIT_ASKPASS` is already set in the environment, git push/pull should just work
 
 ## Persistence
 
+- **This container is persistent** — it survives between sessions. Installed packages (apt, npm global, pip global, runtimes) persist across sessions.
 - File changes in `/project` persist (bind-mounted to host)
 - Your memories, conversation history, and plans persist in `/project/.claude-data/`
 - Auth tokens are read-only from the host — do not try to modify them
-- Installed packages (apt, npm global, pip global) do NOT persist between sessions
-  - npm/pip caches DO persist (Docker volumes), so reinstalls are fast
+- The container may be rebuilt if it becomes stale (Claude Code version mismatch or > 7 days old). When that happens, you'll need to reinstall project-specific runtimes and tools.

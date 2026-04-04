@@ -1,0 +1,27 @@
+{
+  "env": {
+    "MAX_THINKING_TOKENS": "50000",
+    "DISABLE_AUTOUPDATER": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Bash(find:*)",
+      "Bash(bash \"$HOME/.claude/claude-code-config/scripts/sync-export.sh\":*)",
+      "Bash(bash \"$HOME/.claude/claude-code-config/scripts/sensitive-check.sh\":*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "defaultMode": "default"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "perl \"$HOME/.claude/claude-code-config/scripts/statusline.pl\""
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-code-plugins": true,
+    "chrome-devtools-mcp@chrome-devtools-plugins": true
+  },
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "high"
+}

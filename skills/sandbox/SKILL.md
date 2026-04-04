@@ -2,6 +2,7 @@
 name: sandbox
 description: Prepare a project for running Claude Code in an isolated Docker dev container and build the image if needed
 user-invocable: true
+host-only: true
 allowed-tools: Bash, Read, Write, Edit, Glob, AskUserQuestion
 ---
 

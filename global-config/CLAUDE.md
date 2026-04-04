@@ -18,14 +18,6 @@ This includes but is not limited to:
 
 ⚠️ **Supply chain attacks in development dependencies are rampant.** Malicious packages can execute arbitrary code during install (npm postinstall hooks, pip setup.py, etc.) and compromise the entire host machine — steal credentials, SSH keys, browser sessions, cryptocurrency wallets, and more.
 
-✅ **Always use a hardened Docker dev container** for each project:
-- All SDKs, CLIs, and dependencies live inside the container
-- Container runs as a non-root user
-- Bridge networking only (no `--network=host`)
-- `npm ignore-scripts=true` to block install hooks
-- Never pull packages published < 7 days ago — applies to fresh installs from a lockfile AND when upgrading/adding dependencies to a lockfile
-- Credentials mounted read-only
+⚠️ If the user asks you to run a dev tool directly, **warn them about the risks** (supply chain attacks, arbitrary code execution during install) and **ask for explicit confirmation** before proceeding. Do not silently comply, but do not hard-block either — the user has the final say.
 
-🚨 If a project doesn't have a dev container yet, **create one before doing anything else.**
-
-🚨 If the user asks you to run a dev tool directly, **refuse and explain why.**
+🐳 If a project needs dev tooling, **offer to run `/sandbox`** to set up an isolated Docker container for the project. Do not run it automatically — let the user decide.
