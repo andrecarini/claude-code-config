@@ -33,6 +33,10 @@ mkdir -p "$LAUNCHER_DIR"
 HOST_VERSION="$(claude --version 2>/dev/null | awk '{print $1}')"
 
 # --- Build image if needed ---
+dockerfile_hash() {
+  md5sum "$CONTAINER_CONFIG/Dockerfile" | cut -c1-32
+}
+
 build_image() {
   echo "Building claude-sandbox image with Claude Code v${HOST_VERSION}..."
   docker build \
@@ -40,6 +44,8 @@ build_image() {
     -t "claude-sandbox:${HOST_VERSION}" \
     -t "claude-sandbox:latest" \
     "$CONTAINER_CONFIG"
+  # Save hash so we detect Dockerfile changes later
+  dockerfile_hash > "$LAUNCHER_DIR/dockerfile-hash"
 }
 
 if ! docker image inspect claude-sandbox:latest > /dev/null 2>&1; then
@@ -76,6 +82,16 @@ if [ -f "$LAUNCHER_DIR/container-created" ]; then
   fi
 fi
 
+CURRENT_DF_HASH="$(dockerfile_hash)"
+if [ -f "$LAUNCHER_DIR/dockerfile-hash" ]; then
+  SAVED_HASH="$(cat "$LAUNCHER_DIR/dockerfile-hash")"
+  if [ "$SAVED_HASH" != "$CURRENT_DF_HASH" ]; then
+    STALE_REASONS="${STALE_REASONS}  - Dockerfile has changed since last build\n"
+  fi
+else
+  STALE_REASONS="${STALE_REASONS}  - Dockerfile has changed since last build\n"
+fi
+
 if [ -n "$STALE_REASONS" ]; then
   echo ""
   echo "⚠️  Container may be stale:"
@@ -97,14 +113,139 @@ if [ -n "$STALE_REASONS" ]; then
   fi
 fi
 
-# --- Build skill mounts (filter out host-only skills) ---
-SKILL_MOUNTS=()
+# --- Discover all available skills ---
+declare -A AVAIL_SKILLS  # name -> path
+declare -A AVAIL_SOURCE  # name -> source label
+declare -a AVAIL_ORDER   # insertion order
+
+# Custom skills (non-host-only)
 for skill in "$CLAUDE_HOST_CONFIG/claude-code-config/skills/"*/; do
   [ -d "$skill" ] || continue
-  SKILL_NAME="$(basename "$skill")"
+  name="$(basename "$skill")"
   if ! grep -q 'host-only: true' "$skill/SKILL.md" 2>/dev/null; then
-    SKILL_MOUNTS+=(-v "$skill:/home/claude/.claude/skills/$SKILL_NAME:ro")
+    AVAIL_SKILLS["$name"]="$skill"
+    AVAIL_SOURCE["$name"]="custom"
+    AVAIL_ORDER+=("$name")
   fi
+done
+
+# Plugin skills
+INSTALLED_PLUGINS="$CLAUDE_HOST_CONFIG/plugins/installed_plugins.json"
+if [ -f "$INSTALLED_PLUGINS" ]; then
+  while IFS=$'\t' read -r pname ppath; do
+    for skill_dir in "$ppath/skills"/*/; do
+      [ -d "$skill_dir" ] || continue
+      name="$(basename "$skill_dir")"
+      AVAIL_SKILLS["$name"]="$skill_dir"
+      AVAIL_SOURCE["$name"]="plugin:$pname"
+      # Only add to order if not already there (dedup)
+      if ! printf '%s\n' "${AVAIL_ORDER[@]}" | grep -qx "$name"; then
+        AVAIL_ORDER+=("$name")
+      fi
+    done
+  done < <(perl -MJSON::PP -0777 -ne '
+    my $d = decode_json($_);
+    for my $key (sort keys %{$d->{plugins}}) {
+      my $p = $d->{plugins}{$key}[-1]{installPath} // next;
+      $p =~ s|\\|/|g; $p =~ s|^([A-Z]):|/\l$1|;
+      my ($label) = $key =~ /^([^@]+)/;
+      print "$label\t$p\n";
+    }
+  ' "$INSTALLED_PLUGINS")
+fi
+
+# --- Skill selection (saved per project) ---
+SELECTION_FILE="$LAUNCHER_DIR/selected-skills.json"
+NEED_PROMPT=true
+declare -a SELECTED_NAMES
+
+if [ -f "$SELECTION_FILE" ]; then
+  # Check for new skills since last selection
+  KNOWN=$(perl -MJSON::PP -0777 -ne 'my $d=decode_json($_); print join("\n", @{$d->{known}})' "$SELECTION_FILE")
+  NEW_SKILLS=()
+  for name in "${AVAIL_ORDER[@]}"; do
+    if ! echo "$KNOWN" | grep -qx "$name"; then
+      NEW_SKILLS+=("$name")
+    fi
+  done
+  if [ ${#NEW_SKILLS[@]} -eq 0 ]; then
+    # No new skills — use saved selection
+    while IFS= read -r s; do SELECTED_NAMES+=("$s"); done < <(
+      perl -MJSON::PP -0777 -ne 'my $d=decode_json($_); print join("\n", @{$d->{selected}})' "$SELECTION_FILE"
+    )
+    NEED_PROMPT=false
+  else
+    echo ""
+    echo "New skills available: ${NEW_SKILLS[*]}"
+    # Pre-select previously selected
+    while IFS= read -r s; do SELECTED_NAMES+=("$s"); done < <(
+      perl -MJSON::PP -0777 -ne 'my $d=decode_json($_); print join("\n", @{$d->{selected}})' "$SELECTION_FILE"
+    )
+  fi
+fi
+
+if $NEED_PROMPT && [ ${#AVAIL_ORDER[@]} -gt 0 ]; then
+  echo ""
+  echo "Available skills for this sandbox:"
+  for i in "${!AVAIL_ORDER[@]}"; do
+    name="${AVAIL_ORDER[$i]}"
+    src="${AVAIL_SOURCE[$name]}"
+    marker=" "
+    for s in "${SELECTED_NAMES[@]}"; do [ "$s" = "$name" ] && marker="x" && break; done
+    printf "  [%s] %d. %s (%s)\n" "$marker" "$((i+1))" "$name" "$src"
+  done
+  echo ""
+  read -r -p "Toggle by number (comma-separated), 'a' for all, Enter to confirm: " INPUT
+  if [ "$INPUT" = "a" ]; then
+    SELECTED_NAMES=("${AVAIL_ORDER[@]}")
+  elif [ -n "$INPUT" ]; then
+    IFS=',' read -ra NUMS <<< "$INPUT"
+    for num in "${NUMS[@]}"; do
+      num="$(echo "$num" | tr -d ' ')"
+      [[ "$num" =~ ^[0-9]+$ ]] || continue
+      idx=$((num - 1))
+      [ "$idx" -ge 0 ] && [ "$idx" -lt ${#AVAIL_ORDER[@]} ] || continue
+      name="${AVAIL_ORDER[$idx]}"
+      # Toggle
+      found=false
+      new_selected=()
+      for s in "${SELECTED_NAMES[@]}"; do
+        if [ "$s" = "$name" ]; then found=true; else new_selected+=("$s"); fi
+      done
+      if $found; then
+        SELECTED_NAMES=("${new_selected[@]}")
+      else
+        SELECTED_NAMES+=("$name")
+      fi
+    done
+  fi
+  # Save selection as JSON
+  perl -MJSON::PP -e '
+    my @sel = @ARGV[0 .. $ARGV[0]-1+$ARGV[0]]; shift @sel;
+    # Actually, re-parse from args
+  ' -- # Too complex inline, use a simpler approach
+  printf '{"selected":[' > "$SELECTION_FILE"
+  first=true
+  for s in "${SELECTED_NAMES[@]}"; do
+    $first || printf ',' >> "$SELECTION_FILE"
+    printf '"%s"' "$s" >> "$SELECTION_FILE"
+    first=false
+  done
+  printf '],"known":[' >> "$SELECTION_FILE"
+  first=true
+  for s in "${AVAIL_ORDER[@]}"; do
+    $first || printf ',' >> "$SELECTION_FILE"
+    printf '"%s"' "$s" >> "$SELECTION_FILE"
+    first=false
+  done
+  printf ']}\n' >> "$SELECTION_FILE"
+fi
+
+# --- Build skill mounts from selection ---
+SKILL_MOUNTS=()
+for name in "${SELECTED_NAMES[@]}"; do
+  path="${AVAIL_SKILLS[$name]}"
+  [ -n "$path" ] && SKILL_MOUNTS+=(-v "$path:/home/claude/.claude/skills/$name:ro")
 done
 
 # --- Extra env for deploy key ---
@@ -119,6 +260,11 @@ if [ -f "$PROJECT_PATH/.claude-data/git-askpass.sh" ]; then
   EXTRA_MOUNTS+=(-v "$PROJECT_PATH/.claude-data/git-askpass.sh:/home/claude/.claude/git-askpass.sh:ro")
   EXTRA_ENV+=(-e "GIT_ASKPASS=/home/claude/.claude/git-askpass.sh")
   EXTRA_MOUNTS+=(-v "$PROJECT_PATH/.claude-data/git-pat:/home/claude/.claude/git-pat:ro")
+fi
+
+# --- Ensure writable claude.json in project ---
+if [ ! -f "$PROJECT_PATH/.claude-data/.claude.json" ] && [ -f "$CONTAINER_CONFIG/claude.json" ]; then
+  cp "$CONTAINER_CONFIG/claude.json" "$PROJECT_PATH/.claude-data/.claude.json"
 fi
 
 # --- Launch or reattach ---
@@ -141,6 +287,7 @@ else
     -v "$PROJECT_PATH:/project" \
     -v "$PROJECT_PATH/.claude-data:/home/claude/.claude" \
     -v "$LAUNCHER_DIR:/home/claude/.claude/.launcher:ro" \
+    -v "$PROJECT_PATH/.claude-data/.claude.json:/home/claude/.claude.json" \
     -v "$CLAUDE_HOST_CONFIG/.credentials.json:/home/claude/.claude/.credentials.json:ro" \
     -v "$CONTAINER_CONFIG/CLAUDE.md:/home/claude/.claude/CLAUDE.md:ro" \
     -v "$CONTAINER_CONFIG/settings.json:/home/claude/.claude/settings.json:ro" \

@@ -21,6 +21,10 @@ ARG CLAUDE_VERSION=latest
 RUN curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE_VERSION}
 ENV PATH="/home/claude/.local/bin:${PATH}"
 
+# Terminal — enable 24-bit color support (matches host terminal)
+ENV TERM=xterm-256color
+ENV COLORTERM=truecolor
+
 # Supply chain hardening — env vars take effect whenever runtimes are installed
 ENV npm_config_ignore_scripts=true
 ENV NODE_OPTIONS="--dns-result-order=ipv4first"

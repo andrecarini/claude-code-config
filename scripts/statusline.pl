@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 # Claude Code status line — Perl core modules only, no external deps.
-# Shows: project | model | context usage | plan rate limits (cached 3min)
+# Shows: project | model | context usage | plan rate limits
 use strict;
 use warnings;
 use JSON::PP;
@@ -87,91 +87,55 @@ my $pc          = $pct_i >= 90 ? $CTX_CRIT : $pct_i >= 67 ? $CTX_WARN : $CTX_OK;
 my $used_tokens = int($size * $pct / 100 + 0.5);
 my $free_tokens = $size - $used_tokens;
 
-# ── Plan usage (cached to file, refreshed every 3 min) ──────
+# ── Plan usage ──────────────────────────────────────────────
 sub usage_color {
     my $p = shift;
     return $p >= 80 ? $CTX_CRIT : $p >= 50 ? $CTX_WARN : $CTX_OK;
 }
 
 sub time_until {
-    my ($iso, $style) = @_;
-    return '' unless defined $iso;
+    my ($val, $style) = @_;
+    return '' unless defined $val && length($val);
     $style //= 'short';  # 'hm' = always XhYYm, 'short' = Xd Yh or Xh
     my $result = eval {
-        $iso =~ s/Z$/+00:00/;
-        if ($iso =~ /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/) {
+        my $secs;
+        if ($val =~ /^\d+(\.\d+)?$/) {
+            # Unix epoch (from stdin rate_limits)
+            $secs = int($val) - time();
+        } else {
+            # ISO timestamp
+            $val =~ s/Z$/+00:00/;
+            $val =~ /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/ or return '';
             my $reset = Time::Piece->strptime("$1-$2-$3 $4:$5:$6", "%Y-%m-%d %H:%M:%S");
-            my $now   = gmtime();
-            my $secs  = $reset->epoch - $now->epoch;
-            $secs = 0 if $secs < 0;
-            my $days  = int($secs / 86400);
-            my $hours = int(($secs % 86400) / 3600);
-            my $mins  = int(($secs % 3600) / 60);
-            if ($style eq 'hm') {
-                sprintf("%dh\x{200A}%02dm", $hours + $days * 24, $mins);
-            } elsif ($days > 0) {
-                "${days}d\x{200A}${hours}h";
-            } elsif ($hours > 0) {
-                "${hours}h";
-            } elsif ($mins > 0) {
-                "${mins}m";
-            } else {
-                "${secs}s";
-            }
-        } else { '' }
+            $secs = $reset->epoch - gmtime()->epoch;
+        }
+        $secs = 0 if $secs < 0;
+        my $days  = int($secs / 86400);
+        my $hours = int(($secs % 86400) / 3600);
+        my $mins  = int(($secs % 3600) / 60);
+        if ($style eq 'hm') {
+            sprintf("%dh\x{200A}%02dm", $hours + $days * 24, $mins);
+        } elsif ($days > 0) {
+            "${days}d\x{200A}${hours}h";
+        } elsif ($hours > 0) {
+            "${hours}h";
+        } elsif ($mins > 0) {
+            "${mins}m";
+        } else {
+            "${secs}s";
+        }
     };
     return $result // '';
 }
 
-sub get_plan_usage {
-    my $home       = $ENV{HOME} // $ENV{USERPROFILE} // '.';
-    my $cache_path = "$home/.claude/.statusline_usage_cache.json";
-    my $creds_path = "$home/.claude/.credentials.json";
-
-    # Check cache (return fresh; keep stale as fallback)
-    my $stale;
-    if (-f $cache_path) {
-        my $cache = eval {
-            open my $fh, '<', $cache_path or die;
-            my $c = decode_json(do { local $/; <$fh> });
-            close $fh;
-            $c;
-        };
-        if ($cache) {
-            return $cache->{data} if (time() - ($cache->{ts} // 0) < 180);
-            $stale = $cache->{data};  # keep stale as fallback
-        }
-    }
-
-    # Fetch from API via curl (fall back to stale cache on failure)
-    my $fetched = eval {
-        open my $fh, '<', $creds_path or die "no creds";
-        my $creds = decode_json(do { local $/; <$fh> });
-        close $fh;
-        my $token = $creds->{claudeAiOauth}{accessToken} or die "no token";
-
-        my $resp = `curl -sf -m 5 -H "Authorization: Bearer $token" -H "anthropic-beta: oauth-2025-04-20" "https://api.anthropic.com/api/oauth/usage" 2>/dev/null`;
-        die "no response" unless $resp;
-        my $usage = decode_json($resp);
-
-        # Write cache
-        if (open my $wfh, '>', $cache_path) {
-            print $wfh encode_json({ ts => time() + 0, data => $usage });
-            close $wfh;
-        }
-        $usage;
-    };
-    return $fetched // $stale;
-}
-
-# ── Plan usage strings ───────────────────────────────────────
+# ── Plan usage (from stdin JSON, native since v2.1.80) ──────
 my ($plan_full, $plan_short) = ('', '');
-my $usage = get_plan_usage();
-if ($usage) {
-    my $h5     = $usage->{five_hour} // {};
-    my $d7     = $usage->{seven_day} // {};
-    my $h5_pct = int(($h5->{utilization} // 0) + 0.5);
-    my $d7_pct = int(($d7->{utilization} // 0) + 0.5);
+my $rl = $data->{rate_limits};
+if ($rl) {
+    my $h5     = $rl->{five_hour} // {};
+    my $d7     = $rl->{seven_day} // {};
+    my $h5_pct = int(($h5->{used_percentage} // 0) + 0.5);
+    my $d7_pct = int(($d7->{used_percentage} // 0) + 0.5);
 
     my $h5_reset = time_until($h5->{resets_at}, 'hm');
     my $d7_reset = time_until($d7->{resets_at});

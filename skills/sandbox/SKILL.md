@@ -21,6 +21,24 @@ ls "$HOME/.claude/claude-code-config/container-config/Dockerfile" 2>/dev/null &&
 
 If MISSING, tell the user the container config repo hasn't been set up yet (they need to install it first — see the repo README) and **stop**.
 
+Also verify the sandbox-specific `claude.json` exists (skips onboarding inside containers):
+
+```bash
+ls "$HOME/.claude/claude-code-config/container-config/claude.json" 2>/dev/null && echo "CLAUDE_JSON_OK" || echo "CLAUDE_JSON_MISSING"
+```
+
+If MISSING, create it:
+
+```json
+{
+  "hasCompletedOnboarding": true,
+  "lastOnboardingVersion": "99.0.0",
+  "numStartups": 1,
+  "hasSeenTasksHint": true,
+  "hasSeenStashHint": true
+}
+```
+
 ## Step 2: Build Docker image if needed
 
 ```bash
@@ -78,10 +96,16 @@ git remote get-url origin 2>/dev/null || echo "NO_REMOTE"
     ```
 - If no auth is configured and the remote is SSH:
   - Ask the user via AskUserQuestion whether to generate a new deploy key, provide an existing one, or skip.
+  - When a deploy key is configured (generated or provided), also create `.claude-data/git-ssh-command.sh`:
+    ```bash
+    #!/bin/bash
+    exec ssh -i /project/deploy_key -o StrictHostKeyChecking=no "$@"
+    ```
+    The launcher uses this script as `GIT_SSH_COMMAND` inside the container.
 
 ## Step 6: Add `claude-sandbox` to PATH (first time only)
 
-The launcher scripts live in `~/.claude/claude-code-config/container-config/bin/` (`claude-sandbox.sh` for Linux/macOS, `claude-sandbox.cmd` for Windows). The goal is to add this `bin/` directory to PATH so the scripts are directly invocable. **Never copy launcher files elsewhere** — always add the source directory to PATH so updates propagate automatically.
+The launcher scripts live in `~/.claude/claude-code-config/container-config/bin/` (`claude-sandbox.sh` for Linux/macOS, `claude-sandbox.ps1` for Windows). The goal is to add this `bin/` directory to PATH so the scripts are directly invocable. **Never copy launcher files elsewhere** — always add the source directory to PATH so updates propagate automatically.
 
 ```bash
 command -v claude-sandbox > /dev/null 2>&1 && echo "ON_PATH" || echo "NOT_ON_PATH"
@@ -127,7 +151,20 @@ else
 fi
 ```
 
-Tell the user they need to **restart their terminal** (or open a new one) for the PATH change to take effect.
+Also on Windows, ensure `.PS1` is in the user's `PATHEXT` so PowerShell scripts can be invoked by name:
+
+```bash
+CURRENT_PATHEXT="$(powershell.exe -NoProfile -Command "[Environment]::GetEnvironmentVariable('PATHEXT','User')" | tr -d '\r')"
+if echo "$CURRENT_PATHEXT" | grep -qi '\.PS1'; then
+  echo "PATHEXT_OK"
+else
+  SYSTEM_PATHEXT="$(powershell.exe -NoProfile -Command "[Environment]::GetEnvironmentVariable('PATHEXT','Machine')" | tr -d '\r')"
+  powershell.exe -NoProfile -Command "[Environment]::SetEnvironmentVariable('PATHEXT', '$SYSTEM_PATHEXT;.PS1', 'User')"
+  echo "ADDED_PS1_TO_PATHEXT"
+fi
+```
+
+Tell the user they need to **restart their terminal** (or open a new one) for the PATH and PATHEXT changes to take effect.
 
 ## Step 7: Output the launch command
 
