@@ -81,6 +81,8 @@ git remote get-url origin 2>/dev/null || echo "NO_REMOTE"
 
 ## Step 6: Add `claude-sandbox` to PATH (first time only)
 
+The launcher scripts live in `~/.claude/claude-code-config/container-config/bin/` (`claude-sandbox.sh` for Linux/macOS, `claude-sandbox.cmd` for Windows). The goal is to add this `bin/` directory to PATH so the scripts are directly invocable. **Never copy launcher files elsewhere** — always add the source directory to PATH so updates propagate automatically.
+
 ```bash
 command -v claude-sandbox > /dev/null 2>&1 && echo "ON_PATH" || echo "NOT_ON_PATH"
 ```
@@ -94,16 +96,38 @@ uname -s 2>/dev/null || echo "Windows"
 ```
 
 **Linux/macOS:**
+
+Make the script executable and create an extensionless symlink:
+
 ```bash
-mkdir -p ~/.local/bin
-ln -sf ~/.claude/claude-code-config/container-config/claude-sandbox.sh ~/.local/bin/claude-sandbox
-chmod +x ~/.claude/claude-code-config/container-config/claude-sandbox.sh
+chmod +x ~/.claude/claude-code-config/container-config/bin/claude-sandbox.sh
+ln -sf claude-sandbox.sh ~/.claude/claude-code-config/container-config/bin/claude-sandbox
+```
+
+Add `bin/` to PATH by appending to the shell profile if not already present:
+
+```bash
+SHELL_RC="$HOME/.bashrc"
+[ -f "$HOME/.zshrc" ] && SHELL_RC="$HOME/.zshrc"
+grep -q 'claude-code-config/container-config/bin' "$SHELL_RC" 2>/dev/null || echo 'export PATH="$HOME/.claude/claude-code-config/container-config/bin:$PATH"' >> "$SHELL_RC"
 ```
 
 **Windows (MINGW/MSYS):**
+
+Add the `bin/` directory to the **user-level** PATH via the Windows registry, if not already present:
+
 ```bash
-cp "$HOME/.claude/claude-code-config/container-config/claude-sandbox.cmd" "$HOME/AppData/Local/Microsoft/WindowsApps/claude-sandbox.cmd"
+BINDIR_WIN="$(cygpath -w "$HOME/.claude/claude-code-config/container-config/bin")"
+CURRENT_PATH="$(powershell.exe -NoProfile -Command "[Environment]::GetEnvironmentVariable('PATH','User')" | tr -d '\r')"
+if echo "$CURRENT_PATH" | grep -qi 'container-config[/\\]bin\|container-config\\\\bin'; then
+  echo "ALREADY_IN_PATH"
+else
+  powershell.exe -NoProfile -Command "[Environment]::SetEnvironmentVariable('PATH', '$BINDIR_WIN;' + [Environment]::GetEnvironmentVariable('PATH','User'), 'User')"
+  echo "ADDED_TO_PATH"
+fi
 ```
+
+Tell the user they need to **restart their terminal** (or open a new one) for the PATH change to take effect.
 
 ## Step 7: Output the launch command
 

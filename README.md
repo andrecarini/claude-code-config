@@ -34,8 +34,9 @@ claude-code-config/
     ├── Dockerfile                   # Docker image: Node 22 + Claude Code CLI + dev tools
     ├── CLAUDE.md                    # Container-specific instructions (full autonomy)
     ├── settings.json                # Container-specific settings
-    ├── claude-sandbox.sh            # Launcher script (Linux/macOS)
-    └── claude-sandbox.cmd           # Launcher script (Windows)
+    └── bin/
+        ├── claude-sandbox.sh        # Launcher script (Linux/macOS)
+        └── claude-sandbox.cmd       # Launcher script (Windows)
 ```
 
 ## Installation
