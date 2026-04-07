@@ -37,6 +37,10 @@ dockerfile_hash() {
   md5sum "$CONTAINER_CONFIG/Dockerfile" | cut -c1-32
 }
 
+launcher_hash() {
+  cat "$CONTAINER_CONFIG/bin/claude-sandbox.sh" "$CONTAINER_CONFIG/bin/claude-sandbox.ps1" 2>/dev/null | md5sum | cut -c1-32
+}
+
 build_image() {
   echo "Building claude-sandbox image with Claude Code v${HOST_VERSION}..."
   docker build \
@@ -90,6 +94,16 @@ if [ -f "$LAUNCHER_DIR/dockerfile-hash" ]; then
   fi
 else
   STALE_REASONS="${STALE_REASONS}  - Dockerfile has changed since last build\n"
+fi
+
+CURRENT_LAUNCHER_HASH="$(launcher_hash)"
+if [ -f "$LAUNCHER_DIR/launcher-hash" ]; then
+  SAVED_LAUNCHER_HASH="$(cat "$LAUNCHER_DIR/launcher-hash")"
+  if [ "$SAVED_LAUNCHER_HASH" != "$CURRENT_LAUNCHER_HASH" ]; then
+    STALE_REASONS="${STALE_REASONS}  - Launcher scripts have changed since container was created\n"
+  fi
+else
+  STALE_REASONS="${STALE_REASONS}  - Launcher scripts have changed since container was created\n"
 fi
 
 if [ -n "$STALE_REASONS" ]; then
@@ -262,6 +276,18 @@ if [ -f "$PROJECT_PATH/.claude-data/git-askpass.sh" ]; then
   EXTRA_MOUNTS+=(-v "$PROJECT_PATH/.claude-data/git-pat:/home/claude/.claude/git-pat:ro")
 fi
 
+# --- Fix ownership for UID consistency across rebuilds ---
+CLAUDE_UID=1000
+if [ -d "$PROJECT_PATH/.claude-data/projects" ]; then
+  OWNER_UID="$(stat -c '%u' "$PROJECT_PATH/.claude-data/projects" 2>/dev/null || stat -f '%u' "$PROJECT_PATH/.claude-data/projects" 2>/dev/null)"
+  if [ -n "$OWNER_UID" ] && [ "$OWNER_UID" != "$CLAUDE_UID" ] && [ "$OWNER_UID" != "0" ]; then
+    echo "Fixing .claude-data ownership (UID $OWNER_UID → $CLAUDE_UID)..."
+    docker run --rm -u root --entrypoint /bin/bash \
+      -v "$PROJECT_PATH/.claude-data:/data" \
+      claude-sandbox:latest -c "chown -R $CLAUDE_UID:$CLAUDE_UID /data"
+  fi
+fi
+
 # --- Ensure writable claude.json in project ---
 if [ ! -f "$PROJECT_PATH/.claude-data/.claude.json" ] && [ -f "$CONTAINER_CONFIG/claude.json" ]; then
   cp "$CONTAINER_CONFIG/claude.json" "$PROJECT_PATH/.claude-data/.claude.json"
@@ -279,6 +305,7 @@ else
   # Save metadata
   echo "$HOST_VERSION" > "$LAUNCHER_DIR/claude-version"
   date -u +"%Y-%m-%dT%H:%M:%S" > "$LAUNCHER_DIR/container-created"
+  launcher_hash > "$LAUNCHER_DIR/launcher-hash"
 
   docker create -it \
     --name "$CONTAINER_NAME" \
@@ -288,7 +315,7 @@ else
     -v "$PROJECT_PATH/.claude-data:/home/claude/.claude" \
     -v "$LAUNCHER_DIR:/home/claude/.claude/.launcher:ro" \
     -v "$PROJECT_PATH/.claude-data/.claude.json:/home/claude/.claude.json" \
-    -v "$CLAUDE_HOST_CONFIG/.credentials.json:/home/claude/.claude/.credentials.json:ro" \
+    -v "$CLAUDE_HOST_CONFIG/.credentials.json:/home/claude/.claude/.credentials.json" \
     -v "$CONTAINER_CONFIG/CLAUDE.md:/home/claude/.claude/CLAUDE.md:ro" \
     -v "$CONTAINER_CONFIG/settings.json:/home/claude/.claude/settings.json:ro" \
     -v "$CLAUDE_HOST_CONFIG/claude-code-config/scripts/statusline.pl:/home/claude/.claude/statusline.pl:ro" \

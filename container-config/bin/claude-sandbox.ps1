@@ -44,6 +44,15 @@ function Get-DockerfileHash {
     [System.BitConverter]::ToString($md5.ComputeHash($bytes)).Replace('-','').ToLower()
 }
 
+function Get-LauncherHash {
+    $md5 = [System.Security.Cryptography.MD5]::Create()
+    $stream = New-Object System.IO.MemoryStream
+    foreach ($f in @("$ContainerConfig\bin\claude-sandbox.sh", "$ContainerConfig\bin\claude-sandbox.ps1")) {
+        if (Test-Path $f) { $b = [System.IO.File]::ReadAllBytes($f); $stream.Write($b, 0, $b.Length) }
+    }
+    [System.BitConverter]::ToString($md5.ComputeHash($stream.ToArray())).Replace('-','').ToLower()
+}
+
 function Build-Image {
     Write-Host "Building claude-sandbox image with Claude Code v${HostVersion}..."
     docker build `
@@ -102,6 +111,17 @@ if (Test-Path $DockerfileHashFile) {
     }
 } else {
     $StaleReasons += "  - Dockerfile has changed since last build"
+}
+
+$LauncherHashFile = "$LauncherDir\launcher-hash"
+$CurrentLauncherHash = Get-LauncherHash
+if (Test-Path $LauncherHashFile) {
+    $SavedLauncherHash = (Get-Content $LauncherHashFile -Raw).Trim()
+    if ($SavedLauncherHash -ne $CurrentLauncherHash) {
+        $StaleReasons += "  - Launcher scripts have changed since container was created"
+    }
+} else {
+    $StaleReasons += "  - Launcher scripts have changed since container was created"
 }
 
 if ($StaleReasons.Count -gt 0) {
@@ -250,6 +270,22 @@ if (Test-Path "$ProjectPath\.claude-data\git-ssh-command.sh") {
     $ExtraMounts += "$ProjectPath\.claude-data\git-ssh-command.sh:/home/claude/.claude/git-ssh-command.sh:ro"
 }
 
+# --- Fix ownership for UID consistency across rebuilds ---
+$ClaudeUid = 1000
+$ProjectsDir = "$ProjectPath\.claude-data\projects"
+if (Test-Path $ProjectsDir) {
+    $OwnerCheck = docker run --rm -u root --entrypoint /bin/bash `
+        -v "${ProjectPath}\.claude-data:/data" `
+        claude-sandbox:latest -c "stat -c '%u' /data/projects 2>/dev/null"
+    $OwnerCheck = ($OwnerCheck | Out-String).Trim()
+    if ($OwnerCheck -and $OwnerCheck -ne "$ClaudeUid" -and $OwnerCheck -ne "0") {
+        Write-Host "Fixing .claude-data ownership (UID $OwnerCheck -> $ClaudeUid)..."
+        docker run --rm -u root --entrypoint /bin/bash `
+            -v "${ProjectPath}\.claude-data:/data" `
+            claude-sandbox:latest -c "chown -R ${ClaudeUid}:${ClaudeUid} /data"
+    }
+}
+
 # --- Ensure writable claude.json in project (template from container-config) ---
 $ClaudeJsonProject = "$ProjectPath\.claude-data\.claude.json"
 $ClaudeJsonTemplate = "$ContainerConfig\claude.json"
@@ -267,6 +303,7 @@ if ($LASTEXITCODE -eq 0) {
     # Save metadata
     $HostVersion | Set-Content "$LauncherDir\claude-version" -NoNewline
     [datetime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ss') | Set-Content "$LauncherDir\container-created" -NoNewline
+    Get-LauncherHash | Set-Content "$LauncherDir\launcher-hash" -NoNewline
 
     $DockerArgs = @(
         'create', '-it'
@@ -279,7 +316,7 @@ if ($LASTEXITCODE -eq 0) {
         '-v', "${ProjectPath}\.claude-data:/home/claude/.claude"
         '-v', "${LauncherDir}:/home/claude/.claude/.launcher:ro"
         '-v', "${ProjectPath}\.claude-data\.claude.json:/home/claude/.claude.json"
-        '-v', "${ClaudeHostConfig}\.credentials.json:/home/claude/.claude/.credentials.json:ro"
+        '-v', "${ClaudeHostConfig}\.credentials.json:/home/claude/.claude/.credentials.json"
         '-v', "${ContainerConfig}\CLAUDE.md:/home/claude/.claude/CLAUDE.md:ro"
         '-v', "${ContainerConfig}\settings.json:/home/claude/.claude/settings.json:ro"
         '-v', "${ClaudeHostConfig}\claude-code-config\scripts\statusline.pl:/home/claude/.claude/statusline.pl:ro"

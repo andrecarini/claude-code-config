@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN useradd -m -s /bin/bash claude
+RUN useradd -m -s /bin/bash -u 1000 claude
 USER claude
 
 # Install Claude Code via native installer
