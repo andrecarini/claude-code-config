@@ -270,20 +270,17 @@ if (Test-Path "$ProjectPath\.claude-data\git-ssh-command.sh") {
     $ExtraMounts += "$ProjectPath\.claude-data\git-ssh-command.sh:/home/claude/.claude/git-ssh-command.sh:ro"
 }
 
-# --- Fix ownership for UID consistency across rebuilds ---
+# --- Fix ownership for UID consistency (dev container creates root-owned files) ---
 $ClaudeUid = 1000
-$ProjectsDir = "$ProjectPath\.claude-data\projects"
-if (Test-Path $ProjectsDir) {
-    $OwnerCheck = docker run --rm -u root --entrypoint /bin/bash `
-        -v "${ProjectPath}\.claude-data:/data" `
-        claude-sandbox:latest -c "stat -c '%u' /data/projects 2>/dev/null"
-    $OwnerCheck = ($OwnerCheck | Out-String).Trim()
-    if ($OwnerCheck -and $OwnerCheck -ne "$ClaudeUid" -and $OwnerCheck -ne "0") {
-        Write-Host "Fixing .claude-data ownership (UID $OwnerCheck -> $ClaudeUid)..."
-        docker run --rm -u root --entrypoint /bin/bash `
-            -v "${ProjectPath}\.claude-data:/data" `
-            claude-sandbox:latest -c "chown -R ${ClaudeUid}:${ClaudeUid} /data"
-    }
+$HasWrong = docker run --rm -u root --entrypoint /bin/bash `
+    -v "${ProjectPath}:/data" `
+    claude-sandbox:latest -c "find /data -maxdepth 2 -not -user $ClaudeUid -not -path '/data/.git/*' -print -quit 2>/dev/null" 2>$null
+$HasWrong = ($HasWrong | Out-String).Trim()
+if ($HasWrong) {
+    Write-Host "Fixing project ownership (setting to UID $ClaudeUid)..."
+    docker run --rm -u root --entrypoint /bin/bash `
+        -v "${ProjectPath}:/data" `
+        claude-sandbox:latest -c "find /data -not -user $ClaudeUid -not -path '/data/.git/*' -print0 2>/dev/null | xargs -0 -r chown ${ClaudeUid}:${ClaudeUid}" 2>$null
 }
 
 # --- Ensure writable claude.json in project (template from container-config) ---

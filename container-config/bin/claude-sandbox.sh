@@ -276,16 +276,16 @@ if [ -f "$PROJECT_PATH/.claude-data/git-askpass.sh" ]; then
   EXTRA_MOUNTS+=(-v "$PROJECT_PATH/.claude-data/git-pat:/home/claude/.claude/git-pat:ro")
 fi
 
-# --- Fix ownership for UID consistency across rebuilds ---
+# --- Fix ownership for UID consistency (dev container creates root-owned files) ---
 CLAUDE_UID=1000
-if [ -d "$PROJECT_PATH/.claude-data/projects" ]; then
-  OWNER_UID="$(stat -c '%u' "$PROJECT_PATH/.claude-data/projects" 2>/dev/null || stat -f '%u' "$PROJECT_PATH/.claude-data/projects" 2>/dev/null)"
-  if [ -n "$OWNER_UID" ] && [ "$OWNER_UID" != "$CLAUDE_UID" ] && [ "$OWNER_UID" != "0" ]; then
-    echo "Fixing .claude-data ownership (UID $OWNER_UID → $CLAUDE_UID)..."
-    docker run --rm -u root --entrypoint /bin/bash \
-      -v "$PROJECT_PATH/.claude-data:/data" \
-      claude-sandbox:latest -c "chown -R $CLAUDE_UID:$CLAUDE_UID /data"
-  fi
+HAS_WRONG="$(docker run --rm -u root --entrypoint /bin/bash \
+  -v "$PROJECT_PATH:/data" \
+  claude-sandbox:latest -c "find /data -maxdepth 2 -not -user $CLAUDE_UID -not -path '/data/.git/*' -print -quit 2>/dev/null" 2>/dev/null)"
+if [ -n "$HAS_WRONG" ]; then
+  echo "Fixing project ownership (setting to UID $CLAUDE_UID)..."
+  docker run --rm -u root --entrypoint /bin/bash \
+    -v "$PROJECT_PATH:/data" \
+    claude-sandbox:latest -c "find /data -not -user $CLAUDE_UID -not -path '/data/.git/*' -print0 2>/dev/null | xargs -0 -r chown $CLAUDE_UID:$CLAUDE_UID" 2>/dev/null || true
 fi
 
 # --- Ensure writable claude.json in project ---
