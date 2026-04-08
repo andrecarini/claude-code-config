@@ -34,4 +34,4 @@ RUN git config --global core.autocrlf input \
     && git config --global init.defaultBranch main
 
 WORKDIR /project
-ENTRYPOINT ["/home/claude/.local/bin/claude", "--dangerously-skip-permissions"]
+ENTRYPOINT ["/home/claude/.local/bin/claude", "--dangerously-skip-permissions", "--continue"]
