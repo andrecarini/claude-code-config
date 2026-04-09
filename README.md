@@ -5,7 +5,7 @@ A custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configura
 - **Global instructions** — supply chain security rules, response style, dev tooling restrictions
 - **Custom statusline** — model, context usage, token counts, plan rate limits with reset timers
 - **Slash commands** — `/backup` (sync + push config), `/create-skill` (create or update skills), `/refresh` (reload instructions), `/sandbox` (containerize a project), `/update` (safe Claude Code updater)
-- **Docker sandbox** — isolated containers with full Claude autonomy, blocked install hooks, 7-day package age minimum
+- **Docker sandbox** — isolated containers with full Claude autonomy, interactive skill selection, blocked install hooks, 7-day package age minimum
 - **Config sync** — bidirectional drift detection, AI-assisted conflict merging, secret scanning
 
 ## Why the Sandbox
@@ -31,12 +31,13 @@ claude-code-config/
 │   ├── sandbox/SKILL.md             # /sandbox      — set up a project for containerized dev
 │   └── update/SKILL.md              # /update       — safe Claude Code updater
 └── container-config/
-    ├── Dockerfile                   # Docker image: Node 22 + Claude Code CLI + dev tools
+    ├── Dockerfile                   # Docker image: Debian bookworm + Claude Code CLI + dev tools
     ├── CLAUDE.md                    # Container-specific instructions (full autonomy)
+    ├── claude.json                  # Onboarding bypass for containers
     ├── settings.json                # Container-specific settings
     └── bin/
         ├── claude-sandbox.sh        # Launcher script (Linux/macOS)
-        └── claude-sandbox.cmd       # Launcher script (Windows)
+        └── claude-sandbox.ps1       # Launcher script (Windows/PowerShell)
 ```
 
 ## Installation
@@ -145,9 +146,8 @@ Opus 4.6 1M  22% |220k 780k| 5h 15%|3h 46m|  7d 12%|4d 22h|
 **Line 2:** Model, context %, used/free tokens, plan rate limits with reset timers
 
 - Background `git fetch` every 30 min (non-blocking)
-- Plan usage cached 3 min (falls back to stale cache on API errors)
 - Wraps to 3 lines if terminal is too narrow
-- Requires: curl, git, terminal with 24-bit color (Windows Terminal, iTerm2, WezTerm, Kitty)
+- Requires: git, terminal with 24-bit color (Windows Terminal, iTerm2, WezTerm, Kitty)
 
 ### Config Sync (`/backup`)
 
@@ -176,32 +176,89 @@ Currently fully implements Windows native install updates. On other platforms, i
 
 ## How the Sandbox Works
 
-Each project gets a **persistent Docker container** — installed packages, runtimes, and tools survive between sessions. The container is rebuilt when Claude Code is updated on the host or when the container is older than 7 days.
+Each project gets a **persistent Docker container** — installed packages, runtimes, and tools survive between sessions.
 
-On every launch, the `claude-sandbox` script:
-1. Checks if a container already exists for this project (name stored in `.claude-data/.launcher/container-name`)
-2. If it exists, checks for staleness (Claude Code version mismatch or age > 7 days) and offers to rebuild
-3. Reattaches to the existing container, or creates a new one
+### Lifecycle
+
+On every launch, the `claude-sandbox` launcher script:
+1. **First-time setup** — if `.claude-data/` doesn't exist, launches Claude on the host to run `/sandbox` interactively
+2. **Image build** — builds the `claude-sandbox` Docker image if it doesn't exist yet
+3. **Staleness check** — detects four conditions that may warrant a rebuild:
+   - Claude Code version mismatch (host was updated since container was created)
+   - Container age > 7 days (base OS packages may be outdated)
+   - Dockerfile changed since last build
+   - Launcher scripts changed since container was created
+4. **Skill selection** — discovers available skills (custom + plugin), presents an interactive picker, saves selections per project (re-prompts only when new skills appear)
+5. **Ownership fix** — ensures project files are owned by the container's `claude` user (UID 1000) to avoid permission errors
+6. **Create or reattach** — creates a new container or reattaches to an existing one
+
+Container names are deterministic per project path (hash-based), stored in `.claude-data/.launcher/container-name`.
 
 ### Mounts
 
 | Mount | Access | What |
 |-------|--------|------|
-| Your project directory | Read/Write | Code lives at `/project` inside the container |
+| Project directory | Read/Write | Code lives at `/project` inside the container |
 | `.claude-data/` | Read/Write | Persists memories, conversation history, plans between sessions |
-| `.claude-data/.launcher/` | Read-only | Container metadata (version, creation date) — tamper-proof |
+| `.claude-data/.claude.json` | Read/Write | Claude settings (onboarding bypass, UI hints) |
+| `.claude-data/.launcher/` | Read-only | Container metadata (version, creation date, skill selection) |
 | `.credentials.json` | Read-only | Auth tokens from host — container can't modify them |
 | `CLAUDE.md`, `settings.json` | Read-only | Container-specific instructions and settings |
-| `statusline.pl` | Read-only | Custom statusline |
-| Non-host-only skills | Read-only | Skills without `host-only: true` in their frontmatter |
+| `statusline.pl` | Read-only | Custom statusline script |
+| Selected skills | Read-only | Skills chosen via the interactive picker |
+| `git-askpass.sh`, `git-pat` | Read-only | PAT-based git auth (if configured) |
+| `git-ssh-command.sh` | Read-only | SSH deploy key wrapper (if configured) |
 
-### Skill filtering
+### Interactive Skill Selection
 
-Skills with `host-only: true` in their YAML frontmatter are excluded from the container. Currently host-only: `/backup`, `/create-skill`, `/sandbox`, `/update`. Skills like `/refresh` are mounted into the container.
+On first launch (or when new skills become available), the launcher presents a picker:
+
+```
+Available skills for this sandbox:
+  [ ] 1. refresh (custom)
+  [ ] 2. frontend-design (plugin:frontend-design)
+  [ ] 3. chrome-devtools (plugin:chrome-devtools-mcp)
+
+Toggle by number (comma-separated), 'a' for all, Enter to confirm:
+```
+
+- Skills with `host-only: true` in their YAML frontmatter are excluded (e.g. `/backup`, `/create-skill`, `/sandbox`, `/update`)
+- Both custom skills and plugin skills are discovered automatically
+- Selections are saved per project in `.claude-data/.launcher/selected-skills.json`
+- The picker only re-appears when new skills are detected; otherwise it uses the saved selection
+
+### Network
+
+**Ports 9000–9009** are mapped 1:1 to the host. When Claude serves a web app, dev server, or any other network service inside the container, it should bind to one of these ports. The user can then access it at `http://localhost:9000` from the host browser.
+
+**Host access:** The container uses Docker's default bridge network. Services listening on the host machine are reachable from inside the container via `host.docker.internal`. This means:
+
+- A database running on the host (e.g. Postgres on port 5432) is accessible from the container at `host.docker.internal:5432`
+- Chrome DevTools debugging on the host can be reached from the container
+- Any other host service bound to `0.0.0.0` or `127.0.0.1` is reachable (Docker Desktop on Windows/macOS routes through its VM)
+
+**What the container can NOT access:**
+
+- The host filesystem outside the project directory
+- Other projects, `~/.ssh`, browser profiles, password managers
+- Host processes (can't read memory, inject code, or kill processes)
+- Other Docker containers (unless on the same network)
+- USB devices, clipboard, display
+
+Docker does not support fine-grained "allow only port X" rules at the container level. Network access is all-or-nothing: the container either has bridge networking (with full host access via `host.docker.internal`) or `--network none` (no network at all). For projects that don't need network access, the Dockerfile or launcher could be modified to use `--network none`.
 
 ### Security
 
-Inside the container, Claude runs with `--dangerously-skip-permissions` (full autonomy) and can freely install packages, run builds, execute tests. The container itself is the security boundary — if a malicious package runs, it's trapped in the container, not on your machine. Supply chain protections (`npm_config_ignore_scripts=true`, 7-day package age rule) are enforced via environment variables.
+Inside the container, Claude runs with `--dangerously-skip-permissions` (full autonomy) and can freely install packages, run builds, execute tests. The container itself is the security boundary:
+
+**Contained:** If a malicious package runs, it is trapped in the container. It cannot access the host filesystem (beyond the mounted project), steal SSH keys, browser sessions, or credentials from other applications.
+
+**Exposed:** The container can reach host network services (see [Network](#network) above) and has read-only access to Claude API credentials. A compromised container could:
+- Modify project files (it has read/write access to `/project`)
+- Attempt to attack network services listening on the host
+- Read (but not modify) Claude API credentials
+
+**Supply chain hardening:** `npm_config_ignore_scripts=true` is baked into the Docker image to block npm postinstall hooks. The container CLAUDE.md enforces a 7-day minimum package age rule. These protections apply even with full autonomy enabled.
 
 ## Customization
 
@@ -212,4 +269,5 @@ Inside the container, Claude runs with `--dangerously-skip-permissions` (full au
 
 ## Platforms
 
-Works on Linux, macOS, and Windows (Git Bash / MSYS2). The launcher scripts handle both Unix and Windows environments.
+- **Linux/macOS:** `claude-sandbox.sh` (Bash). Requires Bash 4+ for associative arrays (skill selection).
+- **Windows:** `claude-sandbox.ps1` (PowerShell). Invoked directly or via `claude-sandbox` after adding `bin/` to PATH and `.PS1` to PATHEXT.

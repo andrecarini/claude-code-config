@@ -45,6 +45,15 @@ Example: to serve a Flutter web build, use port 9000:
 dhttpd --port 9000 --path build/web
 ```
 
+### Accessing Host Services
+
+Services running on the user's host machine (databases, Chrome DevTools, APIs, etc.) are reachable from inside this container via **`host.docker.internal`**. For example:
+- `host.docker.internal:5432` — a Postgres instance on the host
+- `host.docker.internal:9222` — Chrome remote debugging on the host
+- `host.docker.internal:6379` — Redis on the host
+
+Use `host.docker.internal` instead of `localhost` or `127.0.0.1` when connecting to host services. `localhost` inside the container refers to the container itself, not the host.
+
 ## Persistence
 
 - **This container is persistent** — it survives between sessions. Installed packages (apt, npm global, pip global, runtimes) persist across sessions.
