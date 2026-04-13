@@ -1,6 +1,6 @@
 ---
 name: sandbox
-description: Prepare a project for running Claude Code in an isolated Docker dev container and build the image if needed
+description: Prepares a project for running Claude Code in an isolated Docker dev container. Builds the image, configures git auth, and sets up the launcher. Use when the user wants to containerize a project, set up a sandbox, or run dev tooling safely.
 user-invocable: true
 host-only: true
 allowed-tools: Bash, Read, Write, Edit, Glob, AskUserQuestion

@@ -8,6 +8,7 @@ set -e
 
 EXPORT_DIR="${CLAUDE_EXPORT_DIR:-$HOME/.claude/claude-code-config}"
 CLAUDE_DIR="$HOME/.claude"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Detect Windows (MINGW/MSYS/Cygwin — no real symlinks)
 is_windows() {
@@ -28,7 +29,7 @@ content_matches() {
 
 # Repo-owned files (these are the source of truth, not copied)
 REPO_FILES="global-config/CLAUDE.md global-config/settings.json"
-SCRIPT_FILES="scripts/statusline.pl scripts/merge-settings.pl scripts/sync-export.sh scripts/sensitive-check.sh"
+SCRIPT_FILES="scripts/statusline.pl skills/backup/scripts/json-diff.pl skills/backup/scripts/sync-export.sh skills/backup/scripts/sensitive-check.sh"
 # Skills are discovered dynamically
 SKILL_FILES=""
 for skill_dir in "$EXPORT_DIR"/skills/*/; do
@@ -105,7 +106,7 @@ echo ","
 SETTINGS_LIVE="$CLAUDE_DIR/settings.json"
 SETTINGS_EXPORT="$EXPORT_DIR/global-config/settings.json"
 if [ -f "$SETTINGS_LIVE" ] && [ -f "$SETTINGS_EXPORT" ]; then
-  if perl "$EXPORT_DIR/scripts/json-diff.pl" "$SETTINGS_LIVE" "$SETTINGS_EXPORT" >/dev/null 2>&1; then
+  if perl "$SCRIPT_DIR/json-diff.pl" "$SETTINGS_LIVE" "$SETTINGS_EXPORT" >/dev/null 2>&1; then
     DIFF="identical"
   else
     DIFF="settings_changed"
@@ -121,7 +122,7 @@ fi
 echo ","
 SETTINGS_CONTAINER="$EXPORT_DIR/container-config/settings.json"
 if [ -f "$SETTINGS_CONTAINER" ] && [ -f "$SETTINGS_EXPORT" ]; then
-  if perl "$EXPORT_DIR/scripts/json-diff.pl" "$SETTINGS_CONTAINER" "$SETTINGS_EXPORT" >/dev/null 2>&1; then
+  if perl "$SCRIPT_DIR/json-diff.pl" "$SETTINGS_CONTAINER" "$SETTINGS_EXPORT" >/dev/null 2>&1; then
     DIFF="identical"
   else
     DIFF="container_settings_diverged"
@@ -136,7 +137,7 @@ echo ","
 MARKETPLACE_LIVE="$CLAUDE_DIR/plugins/known_marketplaces.json"
 MARKETPLACE_EXPORT="$EXPORT_DIR/global-config/known_marketplaces.json"
 if [ -f "$MARKETPLACE_LIVE" ] && [ -f "$MARKETPLACE_EXPORT" ]; then
-  if perl "$EXPORT_DIR/scripts/json-diff.pl" --deep-exclude installLocation "$MARKETPLACE_LIVE" "$MARKETPLACE_EXPORT" >/dev/null 2>&1; then
+  if perl "$SCRIPT_DIR/json-diff.pl" --deep-exclude installLocation "$MARKETPLACE_LIVE" "$MARKETPLACE_EXPORT" >/dev/null 2>&1; then
     DIFF="identical"
   else
     DIFF="marketplace_changed"

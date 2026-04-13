@@ -1,6 +1,6 @@
 ---
 name: backup
-description: Sync Claude Code config (live host ↔ global-config ↔ container-config), backup live settings, scan for secrets, commit and push
+description: Syncs Claude Code config between live host and the config repo (global-config + container-config). Backs up live settings, scans for secrets, commits and pushes. Use when the user wants to sync config, back up settings, push config changes, or says "backup", "sync config", "push config".
 user-invocable: true
 host-only: true
 allowed-tools: Bash, Read, Write, Edit, AskUserQuestion
@@ -61,7 +61,7 @@ cp ~/.claude/settings.json "$HOME/.claude/settings.json.$(date +%Y-%m-%dT%H%M%S)
 Do NOT auto-modify the live settings without user approval. Run the semantic diff to see exactly what differs:
 
 ```bash
-perl "$HOME/.claude/claude-code-config/scripts/json-diff.pl" ~/.claude/settings.json ~/.claude/claude-code-config/global-config/settings.json
+perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/settings.json ~/.claude/claude-code-config/global-config/settings.json
 ```
 
 This outputs a JSON report with:
@@ -99,7 +99,7 @@ After all choices, write the reconciled result to `global-config/known_marketpla
 Run the detection script:
 
 ```
-bash "$HOME/.claude/claude-code-config/scripts/sync-export.sh"
+bash "${CLAUDE_SKILL_DIR}/scripts/sync-export.sh"
 ```
 
 This outputs JSON describing each file's sync status:
@@ -138,7 +138,7 @@ For **marketplace_changed**, **live_only**, or **export_only** marketplace: alre
 After `global-config/settings.json` is finalized in Step 3, run the semantic diff against `container-config/settings.json`:
 
 ```bash
-perl "$HOME/.claude/claude-code-config/scripts/json-diff.pl" ~/.claude/claude-code-config/global-config/settings.json ~/.claude/claude-code-config/container-config/settings.json
+perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/claude-code-config/global-config/settings.json ~/.claude/claude-code-config/container-config/settings.json
 ```
 
 If the report's `status` is `"identical"`, skip silently. Otherwise:
@@ -159,7 +159,7 @@ If the report's `status` is `"identical"`, skip silently. Otherwise:
 Before committing, run the sensitive data scanner:
 
 ```
-bash "$HOME/.claude/claude-code-config/scripts/sensitive-check.sh" "$HOME/.claude/claude-code-config"
+bash "${CLAUDE_SKILL_DIR}/scripts/sensitive-check.sh" "$HOME/.claude/claude-code-config"
 ```
 
 If it finds anything, show the user what was detected and **do NOT proceed** with git operations until resolved.

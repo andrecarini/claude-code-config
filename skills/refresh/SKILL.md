@@ -1,6 +1,6 @@
 ---
 name: refresh
-description: Force reread all CLAUDE.md guidelines (global + project) and summarize key rules
+description: Rereads all CLAUDE.md guidelines (global + project) and summarizes key rules. Use when Claude seems to have drifted from guidelines mid-conversation, or when the user says "refresh", "reread instructions", "reload guidelines".
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: Read, Glob

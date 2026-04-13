@@ -4,7 +4,7 @@ A custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configura
 
 - **Global instructions** — supply chain security rules, response style, dev tooling restrictions
 - **Custom statusline** — model, context usage, token counts, plan rate limits with reset timers
-- **Slash commands** — `/backup` (sync + push config), `/create-skill` (create or update skills), `/refresh` (reload instructions), `/sandbox` (containerize a project), `/update` (safe Claude Code updater)
+- **Slash commands** — `/backup` (sync + push config), `/create-skill` (create new skills), `/plan` (create persistent plan), `/refresh` (reload instructions), `/sandbox` (containerize a project), `/update` (safe Claude Code updater), `/update-skill` (modify existing skills), `/work-plan` (resume plan work)
 - **Docker sandbox** — isolated containers with full Claude autonomy, interactive skill selection, blocked install hooks, 7-day package age minimum
 - **Config sync** — bidirectional drift detection, AI-assisted conflict merging, secret scanning
 
@@ -20,18 +20,24 @@ claude-code-config/
 │   ├── CLAUDE.md                    # Global instructions (supply chain rules, response style)
 │   ├── known_marketplaces.json      # Marketplace selections (synced across machines)
 │   └── settings.json                # Base settings (env, statusline, plugins, effort level)
+├── references/
+│   └── skill-writing-guide.md         # Shared skill authoring guide (folder structure, progressive disclosure, writing tips)
 ├── scripts/
-│   ├── statusline.pl                # Custom two-line status bar (model, context, rate limits)
-│   ├── json-diff.pl                 # Semantic JSON diff (ignores key order, structured report)
-│   ├── merge-settings.pl            # Merges repo settings into existing settings.json
-│   ├── sync-export.sh               # Detects drift between live config and this repo
-│   └── sensitive-check.sh           # Scans for secrets before committing
+│   └── statusline.pl                # Custom two-line status bar (model, context, rate limits)
 ├── skills/
-│   ├── backup/SKILL.md              # /backup       — sync config, scan for secrets, push
-│   ├── create-skill/SKILL.md        # /create-skill — create or update a skill
-│   ├── refresh/SKILL.md             # /refresh      — reread CLAUDE.md mid-conversation
-│   ├── sandbox/SKILL.md             # /sandbox      — set up a project for containerized dev
-│   └── update/SKILL.md              # /update       — safe Claude Code updater
+│   ├── backup/                      # /backup       — sync config, scan for secrets, push
+│   │   ├── SKILL.md
+│   │   └── scripts/
+│   │       ├── json-diff.pl         # Semantic JSON diff (ignores key order, structured report)
+│   │       ├── sync-export.sh       # Detects drift between live config and this repo
+│   │       └── sensitive-check.sh   # Scans for secrets before committing
+│   ├── create-skill/SKILL.md        # /create-skill  — create new skill(s) with auto-linking
+│   ├── plan/SKILL.md                # /plan          — create a persistent multi-session plan
+│   ├── refresh/SKILL.md             # /refresh       — reread CLAUDE.md mid-conversation
+│   ├── sandbox/SKILL.md             # /sandbox       — set up a project for containerized dev
+│   ├── update/SKILL.md              # /update        — safe Claude Code updater
+│   ├── update-skill/SKILL.md       # /update-skill  — modify existing skill(s)
+│   └── work-plan/SKILL.md          # /work-plan     — resume work on a persistent plan
 └── container-config/
     ├── Dockerfile                   # Docker image: Debian bookworm + Claude Code CLI + dev tools
     ├── CLAUDE.md                    # Container-specific instructions (full autonomy)
@@ -98,10 +104,11 @@ done
   ```bash
   cp ~/.claude/claude-code-config/global-config/settings.json ~/.claude/settings.json
   ```
-- If it already exists: merge using the provided script. This preserves the existing `permissions` block and updates everything else (env, statusline, plugins, effort level) from the repo defaults.
+- If it already exists: run the semantic diff to compare, then present each difference to the user interactively:
   ```bash
-  perl ~/.claude/claude-code-config/scripts/merge-settings.pl ~/.claude/settings.json ~/.claude/claude-code-config/global-config/settings.json > /tmp/merged-settings.json && mv /tmp/merged-settings.json ~/.claude/settings.json
+  perl ~/.claude/claude-code-config/skills/backup/scripts/json-diff.pl ~/.claude/settings.json ~/.claude/claude-code-config/global-config/settings.json
   ```
+  For each key in `only_right` (in repo but not live) or `diverged` (different values), ask the user whether to adopt the repo value or keep their existing value. Keys in `only_left` (in live but not repo) are the user's own additions — keep them.
 
 **5. Add missing marketplaces:**
 

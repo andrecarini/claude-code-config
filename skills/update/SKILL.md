@@ -1,6 +1,6 @@
 ---
 name: update
-description: Safely update Claude Code — checks changelog, release age, community issues, then offers version choices
+description: Safely updates Claude Code by researching releases before installing. Checks changelog, release age, and community issues, then offers version choices. Use when the user wants to update Claude Code, check for new versions, or says "update", "upgrade", "new version".
 user-invocable: true
 host-only: true
 allowed-tools: Bash, Read, WebFetch, WebSearch, AskUserQuestion, Skill

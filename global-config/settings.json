@@ -4,14 +4,11 @@
     "DISABLE_AUTOUPDATER": "1",
     "CLAUDE_AUTO_BACKGROUND_TASKS": "1",
     "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "0",
-    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1",
     "DISABLE_TELEMETRY": "1",
-    "CLAUDE_CODE_EFFORT_LEVEL": "max",
     "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION": "false",
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "true",
     "CLAUDE_CODE_NEW_INIT": "1",
     "DISABLE_UPGRADE_COMMAND": "1",
-    "MAX_THINKING_TOKENS": "100000",
     "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1"
   },
   "permissions": {
@@ -19,9 +16,7 @@
       "Read",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(wc:*)",
-      "Bash(bash \"$HOME/.claude/claude-code-config/scripts/sync-export.sh\":*)",
-      "Bash(bash \"$HOME/.claude/claude-code-config/scripts/sensitive-check.sh\":*)"
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": [],
