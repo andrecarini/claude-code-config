@@ -15,9 +15,6 @@
     "DISABLE_LOGIN_COMMAND": "1",
     "DISABLE_LOGOUT_COMMAND": "1"
   },
-  "permissions": {
-    "skipDangerousModePermissionPrompt": true
-  },
   "statusLine": {
     "type": "command",
     "command": "perl \"$HOME/.claude/statusline.pl\""
@@ -32,5 +29,6 @@
     "commit": "",
     "pr": ""
   },
-  "showThinkingSummaries": true
+  "showThinkingSummaries": true,
+  "skipDangerousModePermissionPrompt": true
 }
