@@ -5,3 +5,4 @@
 *.secret
 deploy_key*
 .statusline_usage_cache.json
+.backup-preferences.json

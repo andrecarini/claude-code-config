@@ -1,11 +1,12 @@
 ---
-name: plan
+name: create-plan
 description: Creates a new persistent plan file for a multi-session initiative. Use when the user wants to plan a complex task that will span multiple sessions, needs tracking across context boundaries, or says things like "let's plan", "create a plan", "make a plan for".
 user-invocable: true
 argument-hint: <plan-name> [description]
 allowed-tools: Bash, Read, Write, Edit, AskUserQuestion, Glob
 related:
-  - work-plan
+  - resume-plan
+  - manage-plans
 ---
 
 # Create a Persistent Plan
@@ -33,7 +34,11 @@ Always create `.claude-plans/` at the project root, regardless of the current wo
 - Create it: `mkdir -p <project-root>/.claude-plans`
 - If it's a git repo, add `.claude-plans/` to `<project-root>/.gitignore` if not already there (plans are local working documents, not committed)
 
-### 2. Gather context
+### 2. Check for name collisions
+
+If `<project-root>/.claude-plans/$0.md` already exists, warn the user and ask whether to overwrite it or pick a different name.
+
+### 3. Gather context
 
 Before writing the plan, understand:
 - What is the objective? What does "done" look like?
@@ -43,7 +48,7 @@ Before writing the plan, understand:
 
 Ask the user if any of this is unclear. Don't assume.
 
-### 3. Write the plan file
+### 4. Write the plan file
 
 Create `<project-root>/.claude-plans/$0.md` with this structure:
 
@@ -105,7 +110,7 @@ Status values: ⬜ Not started | 🔧 In progress | ✅ Done | ❌ Discarded
 ## Session Workflow
 
 Each session working on this plan:
-1. **Start** — Read this plan file → Create a Claude Code session plan (not a file) with scoped tasks and success criteria
+1. **Start** — Read this plan file → Run `/resume-plan <name>` to create a scoped session plan
 2. **Work** — Execute tasks with test/validate loop, mark tasks complete as they pass
 3. **End** — Update THIS plan file: attempt log, deliverable status, current state, timestamp
 
@@ -121,7 +126,7 @@ Update this document when:
 **Last updated:** <current date>
 ```
 
-### 4. Confirm with the user
+### 5. Confirm with the user
 
 Show the plan file path and a summary of what was captured. Ask if anything is missing or wrong before proceeding.
 

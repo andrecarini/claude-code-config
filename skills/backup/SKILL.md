@@ -58,22 +58,45 @@ done
 cp ~/.claude/settings.json "$HOME/.claude/settings.json.$(date +%Y-%m-%dT%H%M%S)"
 ```
 
-Do NOT auto-modify the live settings without user approval. Run the semantic diff to see exactly what differs:
+Do NOT auto-modify the live settings without user approval. Run the semantic diff filtered through saved preferences:
 
 ```bash
-perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/settings.json ~/.claude/claude-code-config/global-config/settings.json
+perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/settings.json ~/.claude/claude-code-config/global-config/settings.json \
+  | perl "${CLAUDE_SKILL_DIR}/scripts/filter-diff.pl" --prefs "$HOME/.claude/claude-code-config/.backup-preferences.json" --scope live_vs_repo
 ```
 
 This outputs a JSON report with:
-- `identical` — keys with matching values in both files
-- `only_left` — keys only in the live settings (first argument)
-- `only_right` — keys only in the repo settings (second argument)
-- `diverged` — keys present in both but with different values (shows both sides)
+- `auto_applied` — keys skipped due to saved preferences (notify the user these were applied)
+- `needs_decision` — keys requiring user input, grouped by `only_left`, `only_right`, `diverged`
+- `has_undecided` — boolean, whether any keys need a decision
 
-If the report's `status` is `"identical"`, skip silently. Otherwise, for each entry in `only_left`, `only_right`, and `diverged`, use AskUserQuestion to present the differences and let the user choose:
-- **"Use live value"** — no change to live; repo will be updated during export in Step 3
-- **"Use repo value"** — update the live settings.json with the repo value
-- **"Skip"** — leave both sides as-is
+If `status` is `"identical"`, skip silently. If there are `auto_applied` entries, list them briefly (e.g. "Applied 2 saved preferences: `key1` (intentionally different), `key2` (live-only)").
+
+For each key in `needs_decision`, use AskUserQuestion to present the difference and let the user choose:
+
+- For `diverged` keys:
+  - **"Use live value"** — one-time sync; repo will be updated during export in Step 3
+  - **"Use repo value"** — update the live settings.json with the repo value
+  - **"Keep different (remember)"** — leave both as-is and save preference so this key is not asked about again
+  - **"Skip"** — leave both sides as-is (will be asked again next sync)
+- For `only_left` keys (only in live):
+  - **"Export to repo"** — repo will pick it up during export in Step 3
+  - **"Keep live-only (remember)"** — save preference so this key is not asked about again
+  - **"Skip"** — will be asked again next sync
+- For `only_right` keys (only in repo):
+  - **"Add to live"** — update live settings.json with the repo value
+  - **"Keep repo-only (remember)"** — save preference so this key is not asked about again
+  - **"Skip"** — will be asked again next sync
+
+For any choice that includes "(remember)", save the preference:
+
+```bash
+perl "${CLAUDE_SKILL_DIR}/scripts/save-preference.pl" \
+  --prefs "$HOME/.claude/claude-code-config/.backup-preferences.json" \
+  --scope live_vs_repo --key "<KEY>" --category "<CATEGORY>" --action "<ACTION>"
+```
+
+Where category/action is: `diverged`/`skip-always`, `only_left`/`left-only`, or `only_right`/`right-only`.
 
 **Marketplaces:** Compare `~/.claude/plugins/known_marketplaces.json` (live) against `~/.claude/claude-code-config/global-config/known_marketplaces.json` (repo). Ignore `installLocation` when comparing (it's machine-specific). For each discrepancy, use AskUserQuestion to present the difference and let the user choose:
 
@@ -135,24 +158,40 @@ For **marketplace_changed**, **live_only**, or **export_only** marketplace: alre
 
 ## Step 3.5: Container settings sync
 
-After `global-config/settings.json` is finalized in Step 3, run the semantic diff against `container-config/settings.json`:
+After `global-config/settings.json` is finalized in Step 3, run the semantic diff filtered through saved preferences:
 
 ```bash
-perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/claude-code-config/global-config/settings.json ~/.claude/claude-code-config/container-config/settings.json
+perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/claude-code-config/global-config/settings.json ~/.claude/claude-code-config/container-config/settings.json \
+  | perl "${CLAUDE_SKILL_DIR}/scripts/filter-diff.pl" --prefs "$HOME/.claude/claude-code-config/.backup-preferences.json" --scope global_vs_container
 ```
 
-If the report's `status` is `"identical"`, skip silently. Otherwise:
+If `status` is `"identical"`, skip silently. If there are `auto_applied` entries, list them briefly (e.g. "Applied 3 saved preferences: `env` (container-only), `model` (intentionally different), ...").
 
-1. For each entry in `diverged` (shared keys with different values), use AskUserQuestion to present the difference and let the user choose:
-   - **"Propagate to container"** — update the key in `container-config/settings.json` to match `global-config`
-   - **"Keep container value"** — leave `container-config/settings.json` as-is
-   - **"Skip"** — leave as-is for now
+For each key in `needs_decision`, use AskUserQuestion to present the difference and let the user choose:
 
-   If multiple keys differ, batch into a single multiSelect AskUserQuestion showing all divergences.
+- For `diverged` keys (same key, different values):
+  - **"Propagate to container"** — one-time sync; update `container-config/settings.json` to match `global-config`
+  - **"Keep container value"** — leave `container-config/settings.json` as-is (one-time)
+  - **"Keep different (remember)"** — leave both as-is and save preference so this key is not asked about again
+  - **"Skip"** — leave as-is (will be asked again next sync)
+- For `only_left` keys (only in global-config):
+  - **"Add to container"** — copy the key to `container-config/settings.json`
+  - **"Keep global-only (remember)"** — save preference so this key is not asked about again
+  - **"Skip"** — will be asked again next sync
+- For `only_right` keys (only in container-config):
+  - **"Keep container-only (remember)"** — save preference so this key is not asked about again
+  - **"Remove from container"** — delete the key from `container-config/settings.json`
+  - **"Skip"** — will be asked again next sync
 
-2. Keys in `only_right` (only in `container-config`) are often intentionally container-specific. Do not remove them.
+For any choice that includes "(remember)", save the preference:
 
-3. Keys in `only_left` (only in `global-config`) are often intentionally absent from the container. Do not add them automatically — only mention if the user asks.
+```bash
+perl "${CLAUDE_SKILL_DIR}/scripts/save-preference.pl" \
+  --prefs "$HOME/.claude/claude-code-config/.backup-preferences.json" \
+  --scope global_vs_container --key "<KEY>" --category "<CATEGORY>" --action "<ACTION>"
+```
+
+Where category/action is: `diverged`/`skip-always`, `only_left`/`left-only`, or `only_right`/`right-only`.
 
 ## Step 4: Sensitive data scan
 

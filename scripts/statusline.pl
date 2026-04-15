@@ -68,6 +68,33 @@ eval {
     }
 };
 
+# ── Plans & Todos ────────────────────────────────────────────
+my $plans_str = '';
+eval {
+    # Plans: non-archived .claude-plans/*.md (per-project)
+    my $root = `git -C "$workspace" rev-parse --show-toplevel 2>/dev/null`;
+    chomp $root;
+    $root = $workspace unless $root;
+    my @parts;
+    if ($root && -d "$root/.claude-plans") {
+        opendir(my $dh, "$root/.claude-plans") or die;
+        my $n = grep { /\.md$/ && -f "$root/.claude-plans/$_" } readdir($dh);
+        closedir($dh);
+        push @parts, "${DIM}\x{25C7}\x{200A}${R}${n}" if $n > 0;
+    }
+
+    # Todos: non-archived ~/.claude/custom-todos/*.md (global)
+    my $todo_dir = "$ENV{HOME}/.claude/custom-todos";
+    if (-d $todo_dir) {
+        opendir(my $dh, $todo_dir) or die;
+        my $n = grep { /\.md$/ && !/^README\.md$/ && -f "$todo_dir/$_" } readdir($dh);
+        closedir($dh);
+        push @parts, "${DIM}\x{25A2}\x{200A}${R}${n}" if $n > 0;
+    }
+
+    $plans_str = join(' ', @parts) if @parts;
+};
+
 # ── Context window ───────────────────────────────────────────
 my $cw   = $data->{context_window} // {};
 my $pct  = $cw->{used_percentage}    // 0;
@@ -155,6 +182,7 @@ my $cols = `tput cols 2>/dev/null`; chomp $cols; $cols ||= 120;
 
 my $line1 = "${PROJECT}${B}${project}${R}";
 $line1 .= "${SEP}${git_str}" if $git_str;
+$line1 .= "${SEP}${plans_str}" if $plans_str;
 
 my $line2 = "${MODEL}${short}${R} "
           . "${DIM}" . fmt($size) . "${R}\x{3000}"

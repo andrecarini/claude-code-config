@@ -4,7 +4,7 @@ A custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configura
 
 - **Global instructions** — supply chain security rules, response style, dev tooling restrictions
 - **Custom statusline** — model, context usage, token counts, plan rate limits with reset timers
-- **Slash commands** — `/backup` (sync + push config), `/create-skill` (create new skills), `/plan` (create persistent plan), `/refresh` (reload instructions), `/sandbox` (containerize a project), `/update` (safe Claude Code updater), `/update-skill` (modify existing skills), `/work-plan` (resume plan work)
+- **Slash commands** — `/backup` (sync + push config), `/create-plan` (create persistent plan), `/create-skill` (create new skills), `/create-todo` (save a todo note), `/manage-plans` (list/view/update/delete/archive plans), `/manage-todos` (CRUD for todos), `/refresh` (reload instructions), `/resume-plan` (resume plan work), `/resume-todo` (work on a todo), `/sandbox` (containerize a project), `/update` (safe Claude Code updater), `/update-skill` (modify existing skills)
 - **Docker sandbox** — isolated containers with full Claude autonomy, interactive skill selection, blocked install hooks, 7-day package age minimum
 - **Config sync** — bidirectional drift detection, AI-assisted conflict merging, secret scanning
 
@@ -23,7 +23,8 @@ claude-code-config/
 ├── references/
 │   └── skill-writing-guide.md         # Shared skill authoring guide (folder structure, progressive disclosure, writing tips)
 ├── scripts/
-│   └── statusline.pl                # Custom two-line status bar (model, context, rate limits)
+│   ├── statusline.pl                # Custom two-line status bar (model, context, rate limits)
+│   └── todo-sync.pl                 # Git sync, listing, creation for custom todos
 ├── skills/
 │   ├── backup/                      # /backup       — sync config, scan for secrets, push
 │   │   ├── SKILL.md
@@ -31,13 +32,17 @@ claude-code-config/
 │   │       ├── json-diff.pl         # Semantic JSON diff (ignores key order, structured report)
 │   │       ├── sync-export.sh       # Detects drift between live config and this repo
 │   │       └── sensitive-check.sh   # Scans for secrets before committing
+│   ├── create-plan/SKILL.md         # /create-plan   — create a persistent multi-session plan
 │   ├── create-skill/SKILL.md        # /create-skill  — create new skill(s) with auto-linking
-│   ├── plan/SKILL.md                # /plan          — create a persistent multi-session plan
+│   ├── create-todo/SKILL.md         # /create-todo   — save a todo note
+│   ├── manage-plans/SKILL.md        # /manage-plans  — list, view, update, delete, archive plans
+│   ├── manage-todos/SKILL.md        # /manage-todos  — CRUD for personal todos
 │   ├── refresh/SKILL.md             # /refresh       — reread CLAUDE.md mid-conversation
+│   ├── resume-plan/SKILL.md         # /resume-plan   — resume work on a persistent plan
+│   ├── resume-todo/SKILL.md         # /resume-todo   — load a todo and work on it
 │   ├── sandbox/SKILL.md             # /sandbox       — set up a project for containerized dev
 │   ├── update/SKILL.md              # /update        — safe Claude Code updater
-│   ├── update-skill/SKILL.md       # /update-skill  — modify existing skill(s)
-│   └── work-plan/SKILL.md          # /work-plan     — resume work on a persistent plan
+│   └── update-skill/SKILL.md       # /update-skill  — modify existing skill(s)
 └── container-config/
     ├── Dockerfile                   # Docker image: Debian bookworm + Claude Code CLI + dev tools
     ├── CLAUDE.md                    # Container-specific instructions (full autonomy)
@@ -167,10 +172,11 @@ Bidirectional sync between your live `~/.claude/` config and this repo:
 1. Detects drift (identical, live-only, export-only, conflict, settings, marketplace, and container settings changes)
 2. Creates timestamped backups of live settings before any modifications
 3. Three-way settings sync: live host ↔ global-config ↔ container-config (semantic JSON comparison — ignores key order)
-4. Syncs marketplace selections across machines (strips machine-specific paths)
-5. Merges conflicts with AI assistance and user approval
-6. Scans all staged files for secrets (API keys, tokens, credentials, private keys)
-7. Commits and pushes (pulls first to avoid conflicts)
+4. Saves user preferences for intentionally-divergent keys so the same questions aren't re-asked across syncs
+5. Syncs marketplace selections across machines (strips machine-specific paths)
+6. Merges conflicts with AI assistance and user approval
+7. Scans all staged files for secrets (API keys, tokens, credentials, private keys)
+8. Commits and pushes (pulls first to avoid conflicts)
 
 ### Refresh (`/refresh`)
 

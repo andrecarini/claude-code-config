@@ -1,14 +1,15 @@
 ---
-name: work-plan
+name: resume-plan
 description: Resumes work on an existing persistent plan. Reads the plan file, creates a scoped session plan, and begins execution. Use when the user says "work on the plan", "continue the plan", "resume work on", or references a plan by name.
 user-invocable: true
 argument-hint: <plan-name>
 allowed-tools: Bash, Read, Write, Edit, AskUserQuestion, Glob
 related:
-  - plan
+  - create-plan
+  - manage-plans
 ---
 
-# Work on a Persistent Plan
+# Resume Work on a Persistent Plan
 
 Resume work on an existing plan from `.claude-plans/` at the project root.
 
@@ -20,7 +21,7 @@ If no argument given, list available plans and ask which one.
 
 ## Steps
 
-### 1. Find the project root and read the plan
+### 1. Find the project root and locate the plan
 
 Determine the project root using this priority:
 1. `git rev-parse --show-toplevel` — if inside a git repo, use the repo root
@@ -29,7 +30,9 @@ Determine the project root using this priority:
 
 Plans live at `<project-root>/.claude-plans/`.
 
-Read `<project-root>/.claude-plans/$0.md`. If it doesn't exist, list available plans in that directory and ask the user.
+If `.claude-plans/` doesn't exist or is empty, tell the user there are no plans yet and suggest `/create-plan` to get started.
+
+Read `<project-root>/.claude-plans/$0.md`. If it doesn't exist, list available plans with their deliverable progress (e.g. "2/5 done") and ask the user which one they meant.
 
 ### 2. Assess current state
 
