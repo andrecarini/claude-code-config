@@ -70,6 +70,8 @@ This outputs a JSON report with:
 - `needs_decision` — keys requiring user input, grouped by `only_left`, `only_right`, `diverged`
 - `has_undecided` — boolean, whether any keys need a decision
 
+Note: keys whose values are nested objects on both sides (like `env`, `enabledPlugins`) are expanded to dotted sub-keys (e.g., `env.DISABLE_LOGIN_COMMAND`). Present each sub-key as an individual decision.
+
 If `status` is `"identical"`, skip silently. If there are `auto_applied` entries, list them briefly (e.g. "Applied 2 saved preferences: `key1` (intentionally different), `key2` (live-only)").
 
 For each key in `needs_decision`, use AskUserQuestion to present the difference and let the user choose:
@@ -96,7 +98,13 @@ perl "${CLAUDE_SKILL_DIR}/scripts/save-preference.pl" \
   --scope live_vs_repo --key "<KEY>" --category "<CATEGORY>" --action "<ACTION>"
 ```
 
-Where category/action is: `diverged`/`skip-always`, `only_left`/`left-only`, or `only_right`/`right-only`.
+Map each "(remember)" option to its `--category` and `--action`:
+
+| Option label | `--category` | `--action` |
+|---|---|---|
+| Keep different (remember) | `diverged` | `skip-always` |
+| Keep live-only (remember) | `only_left` | `left-only` |
+| Keep repo-only (remember) | `only_right` | `right-only` |
 
 **Marketplaces:** Compare `~/.claude/plugins/known_marketplaces.json` (live) against `~/.claude/claude-code-config/global-config/known_marketplaces.json` (repo). Ignore `installLocation` when comparing (it's machine-specific). For each discrepancy, use AskUserQuestion to present the difference and let the user choose:
 
@@ -165,7 +173,9 @@ perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/claude-code-config/glo
   | perl "${CLAUDE_SKILL_DIR}/scripts/filter-diff.pl" --prefs "$HOME/.claude/claude-code-config/.backup-preferences.json" --scope global_vs_container
 ```
 
-If `status` is `"identical"`, skip silently. If there are `auto_applied` entries, list them briefly (e.g. "Applied 3 saved preferences: `env` (container-only), `model` (intentionally different), ...").
+Note: keys whose values are nested objects on both sides (like `env`, `enabledPlugins`) are expanded to dotted sub-keys (e.g., `env.DISABLE_LOGIN_COMMAND`). Present each sub-key as an individual decision.
+
+If `status` is `"identical"`, skip silently. If there are `auto_applied` entries, list them briefly (e.g. "Applied 3 saved preferences: `env.FOO` (container-only), `model` (intentionally different), ...").
 
 For each key in `needs_decision`, use AskUserQuestion to present the difference and let the user choose:
 
@@ -191,7 +201,13 @@ perl "${CLAUDE_SKILL_DIR}/scripts/save-preference.pl" \
   --scope global_vs_container --key "<KEY>" --category "<CATEGORY>" --action "<ACTION>"
 ```
 
-Where category/action is: `diverged`/`skip-always`, `only_left`/`left-only`, or `only_right`/`right-only`.
+Map each "(remember)" option to its `--category` and `--action`:
+
+| Option label | `--category` | `--action` |
+|---|---|---|
+| Keep different (remember) | `diverged` | `skip-always` |
+| Keep global-only (remember) | `only_left` | `left-only` |
+| Keep container-only (remember) | `only_right` | `right-only` |
 
 ## Step 4: Sensitive data scan
 
@@ -225,10 +241,21 @@ If the repo has no remote configured, commit locally and tell the user to set up
 
 ## Step 6: Check for missing plugins
 
-Read `enabledPlugins` from the repo's `global-config/settings.json`. Compare against `~/.claude/plugins/installed_plugins.json` (if it exists). If any plugins are listed in the config but not installed locally:
+Run the plugin check script:
 
-1. For each missing plugin, check that its marketplace (the part after `@` in the plugin key) exists in `~/.claude/plugins/known_marketplaces.json`. If a marketplace is missing, inform the user to add it first with `/plugin marketplace add`.
-2. For plugins whose marketplace is present, inform the user and offer to install them with `/plugin install <name>@<marketplace>`.
+```bash
+perl "${CLAUDE_SKILL_DIR}/scripts/check-plugins.pl" \
+  --settings "$HOME/.claude/claude-code-config/global-config/settings.json" \
+  --installed "$HOME/.claude/plugins/installed_plugins.json" \
+  --marketplaces "$HOME/.claude/plugins/known_marketplaces.json"
+```
+
+If `status` is `"ok"` or `"no_config"`, skip silently.
+
+If `status` is `"missing_plugins"`:
+- For entries in `missing_marketplaces`: inform the user that the marketplace needs to be added first with `/plugin marketplace add <owner>/<repo>`.
+- For entries in `missing`: inform the user and offer to install with `/plugin install <name>@<marketplace>`.
+- For entries in `extra_installed`: mention informally that these are installed locally but not tracked in the config (no action needed).
 
 ## Step 7: Report
 

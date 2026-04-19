@@ -9,13 +9,13 @@ FOUND=0
 # Patterns that suggest sensitive data
 PATTERNS=(
   'sk-ant-'           # Anthropic API keys
-  'sk-[a-zA-Z0-9]{20}'  # Generic secret keys
+  'sk-[a-zA-Z0-9]{20,}'  # Generic secret keys
   'AIza[a-zA-Z0-9_-]'   # Google API keys
   'Bearer [a-zA-Z0-9_-]'  # Bearer tokens
   'accessToken'       # OAuth tokens
   'PRIVATE KEY'       # Private keys
-  'password\s*[:=]'   # Hardcoded passwords
-  'secret\s*[:=]'     # Hardcoded secrets
+  '[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd]\s*[:=]'   # Hardcoded passwords
+  '[Ss][Ee][Cc][Rr][Ee][Tt]\s*[:=]'           # Hardcoded secrets
   'dsn.*sentry'       # Sentry DSNs (with actual values)
   'https://[^"]*@[^"]*\.ingest\.' # Sentry ingest URLs
   'credentials_json'  # GCP credentials

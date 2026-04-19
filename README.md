@@ -4,7 +4,7 @@ A custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configura
 
 - **Global instructions** — supply chain security rules, response style, dev tooling restrictions
 - **Custom statusline** — model, context usage, token counts, plan rate limits with reset timers
-- **Slash commands** — `/backup` (sync + push config), `/create-plan` (create persistent plan), `/create-skill` (create new skills), `/create-todo` (save a todo note), `/manage-plans` (list/view/update/delete/archive plans), `/manage-todos` (CRUD for todos), `/refresh` (reload instructions), `/resume-plan` (resume plan work), `/resume-todo` (work on a todo), `/sandbox` (containerize a project), `/update` (safe Claude Code updater), `/update-skill` (modify existing skills)
+- **Slash commands** — `/backup` (sync + push config), `/create-plan` (create persistent plan), `/create-skill` (create new skills), `/create-todo` (save a todo note), `/launch-chrome-puppet` (CDP browser automation), `/manage-plans` (list/view/update/delete/archive plans), `/manage-todos` (CRUD for todos), `/refresh` (reload instructions), `/resume-plan` (resume plan work), `/resume-todo` (work on a todo), `/sandbox` (containerize a project), `/update` (safe Claude Code updater), `/update-skill` (modify existing skills)
 - **Docker sandbox** — isolated containers with full Claude autonomy, interactive skill selection, blocked install hooks, 7-day package age minimum
 - **Config sync** — bidirectional drift detection, AI-assisted conflict merging, secret scanning
 
@@ -35,6 +35,11 @@ claude-code-config/
 │   ├── create-plan/SKILL.md         # /create-plan   — create a persistent multi-session plan
 │   ├── create-skill/SKILL.md        # /create-skill  — create new skill(s) with auto-linking
 │   ├── create-todo/SKILL.md         # /create-todo   — save a todo note
+│   ├── launch-chrome-puppet/        # /launch-chrome-puppet — CDP browser automation
+│   │   ├── SKILL.md
+│   │   └── scripts/
+│   │       ├── chrome-puppet.pl     # Subcommand dispatcher (launch, navigate, text, etc.)
+│   │       └── lib/CDPClient.pm     # Pure-Perl WebSocket + CDP client
 │   ├── manage-plans/SKILL.md        # /manage-plans  — list, view, update, delete, archive plans
 │   ├── manage-todos/SKILL.md        # /manage-todos  — CRUD for personal todos
 │   ├── refresh/SKILL.md             # /refresh       — reread CLAUDE.md mid-conversation
