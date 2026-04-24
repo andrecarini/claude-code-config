@@ -6,7 +6,7 @@
 # Settings is the only file that needs merging (permissions stay machine-local).
 set -e
 
-EXPORT_DIR="${CLAUDE_EXPORT_DIR:-$HOME/.claude/claude-code-config}"
+EXPORT_DIR="${CLAUDE_EXPORT_DIR:-$HOME/.claude/ccpraxis}"
 CLAUDE_DIR="$HOME/.claude"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 

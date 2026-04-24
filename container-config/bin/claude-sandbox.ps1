@@ -9,7 +9,7 @@ if ($args.Count -gt 0) {
 $ProjectPath = $ProjectPath.ToString().TrimEnd('\')
 $ProjectName = (Split-Path $ProjectPath -Leaf).ToLower() -replace ' ', '-'
 $ClaudeHostConfig = "$env:USERPROFILE\.claude"
-$ContainerConfig = "$ClaudeHostConfig\claude-code-config\container-config"
+$ContainerConfig = "$ClaudeHostConfig\ccpraxis\container-config"
 $LauncherDir = "$ProjectPath\.claude-data\.launcher"
 
 # --- Terminal output self-heal ---
@@ -168,7 +168,7 @@ if ($StaleReasons.Count -gt 0) {
 $AvailableSkills = [ordered]@{}  # name -> {source, path}
 
 # Custom skills (non-host-only)
-$SkillsDir = "$ClaudeHostConfig\claude-code-config\skills"
+$SkillsDir = "$ClaudeHostConfig\ccpraxis\skills"
 if (Test-Path $SkillsDir) {
     Get-ChildItem -Directory $SkillsDir | ForEach-Object {
         $SkillMd = Join-Path $_.FullName "SKILL.md"
@@ -341,7 +341,7 @@ if ($LASTEXITCODE -eq 0) {
         '-v', "${ClaudeHostConfig}\.credentials.json:/home/claude/.claude/.credentials.json"
         '-v', "${ContainerConfig}\CLAUDE.md:/home/claude/.claude/CLAUDE.md:ro"
         '-v', "${ContainerConfig}\settings.json:/home/claude/.claude/settings.json:ro"
-        '-v', "${ClaudeHostConfig}\claude-code-config\scripts\statusline.pl:/home/claude/.claude/statusline.pl:ro"
+        '-v', "${ClaudeHostConfig}\ccpraxis\scripts\statusline.pl:/home/claude/.claude/statusline.pl:ro"
     )
     $DockerArgs += $SkillMounts
     $DockerArgs += $ExtraMounts

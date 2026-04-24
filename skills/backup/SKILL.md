@@ -6,12 +6,12 @@ host-only: true
 allowed-tools: Bash, Read, Write, Edit, AskUserQuestion
 ---
 
-Sync the Claude Code config between `~/.claude/` (live) and the export repo at `~/.claude/claude-code-config/`.
+Sync the Claude Code config between `~/.claude/` (live) and the export repo at `~/.claude/ccpraxis/`.
 
 ## Step 1: Integrate remote
 
 ```bash
-cd "$HOME/.claude/claude-code-config" && git fetch origin 2>&1 || true
+cd "$HOME/.claude/ccpraxis" && git fetch origin 2>&1 || true
 ```
 
 If the repo has no remote configured, skip this step silently.
@@ -19,7 +19,7 @@ If the repo has no remote configured, skip this step silently.
 If remote has new commits, integrate them now so the repo is fully up to date before syncing:
 
 ```bash
-cd "$HOME/.claude/claude-code-config"
+cd "$HOME/.claude/ccpraxis"
 # Stash any uncommitted local changes (from /create-skill, manual edits, etc.)
 git stash 2>&1 || true
 # Merge remote — fast-forward when possible, merge commit when diverged
@@ -36,11 +36,11 @@ After this step, the repo is fully up to date with remote.
 
 Make sure the local `~/.claude/` is wired up correctly. This catches new skills, updated CLAUDE.md, and settings changes from remote or local edits.
 
-**Skills:** For each subdirectory in `~/.claude/claude-code-config/skills/`, ensure `~/.claude/skills/` has a matching copy or symlink. Remove any existing file/directory first and re-create it — use symlinks on Unix, copies on Windows (where `ln -s` silently falls back to copying and `-L` checks always fail):
+**Skills:** For each subdirectory in `~/.claude/ccpraxis/skills/`, ensure `~/.claude/skills/` has a matching copy or symlink. Remove any existing file/directory first and re-create it — use symlinks on Unix, copies on Windows (where `ln -s` silently falls back to copying and `-L` checks always fail):
 
 ```bash
 mkdir -p ~/.claude/skills
-for skill in ~/.claude/claude-code-config/skills/*/; do
+for skill in ~/.claude/ccpraxis/skills/*/; do
   name="$(basename "$skill")"
   rm -rf ~/.claude/skills/"$name"
   case "$(uname -s)" in
@@ -50,7 +50,7 @@ for skill in ~/.claude/claude-code-config/skills/*/; do
 done
 ```
 
-**CLAUDE.md:** On Unix, if `~/.claude/CLAUDE.md` is not a symlink to the repo version, flag it. On Windows, compare content against `~/.claude/claude-code-config/global-config/CLAUDE.md` — if they differ, flag it. Don't change it automatically in either case (the user may have intentionally merged content).
+**CLAUDE.md:** On Unix, if `~/.claude/CLAUDE.md` is not a symlink to the repo version, flag it. On Windows, compare content against `~/.claude/ccpraxis/global-config/CLAUDE.md` — if they differ, flag it. Don't change it automatically in either case (the user may have intentionally merged content).
 
 **settings.json:** Before making any changes to `~/.claude/settings.json`, create a timestamped backup:
 
@@ -61,8 +61,8 @@ cp ~/.claude/settings.json "$HOME/.claude/settings.json.$(date +%Y-%m-%dT%H%M%S)
 Do NOT auto-modify the live settings without user approval. Run the semantic diff filtered through saved preferences:
 
 ```bash
-perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/settings.json ~/.claude/claude-code-config/global-config/settings.json \
-  | perl "${CLAUDE_SKILL_DIR}/scripts/filter-diff.pl" --prefs "$HOME/.claude/claude-code-config/.backup-preferences.json" --scope live_vs_repo
+perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/settings.json ~/.claude/ccpraxis/global-config/settings.json \
+  | perl "${CLAUDE_SKILL_DIR}/scripts/filter-diff.pl" --prefs "$HOME/.claude/ccpraxis/.backup-preferences.json" --scope live_vs_repo
 ```
 
 This outputs a JSON report with:
@@ -94,7 +94,7 @@ For any choice that includes "(remember)", save the preference:
 
 ```bash
 perl "${CLAUDE_SKILL_DIR}/scripts/save-preference.pl" \
-  --prefs "$HOME/.claude/claude-code-config/.backup-preferences.json" \
+  --prefs "$HOME/.claude/ccpraxis/.backup-preferences.json" \
   --scope live_vs_repo --key "<KEY>" --category "<CATEGORY>" --action "<ACTION>"
 ```
 
@@ -106,7 +106,7 @@ Map each "(remember)" option to its `--category` and `--action`:
 | Keep live-only (remember) | `only_left` | `left-only` |
 | Keep repo-only (remember) | `only_right` | `right-only` |
 
-**Marketplaces:** Compare `~/.claude/plugins/known_marketplaces.json` (live) against `~/.claude/claude-code-config/global-config/known_marketplaces.json` (repo). Ignore `installLocation` when comparing (it's machine-specific). For each discrepancy, use AskUserQuestion to present the difference and let the user choose:
+**Marketplaces:** Compare `~/.claude/plugins/known_marketplaces.json` (live) against `~/.claude/ccpraxis/global-config/known_marketplaces.json` (repo). Ignore `installLocation` when comparing (it's machine-specific). For each discrepancy, use AskUserQuestion to present the difference and let the user choose:
 
 - **Marketplace in live but not repo** (added locally):
   - **"Export to repo"** — will be included in the repo version
@@ -169,8 +169,8 @@ For **marketplace_changed**, **live_only**, or **export_only** marketplace: alre
 After `global-config/settings.json` is finalized in Step 3, run the semantic diff filtered through saved preferences:
 
 ```bash
-perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/claude-code-config/global-config/settings.json ~/.claude/claude-code-config/container-config/settings.json \
-  | perl "${CLAUDE_SKILL_DIR}/scripts/filter-diff.pl" --prefs "$HOME/.claude/claude-code-config/.backup-preferences.json" --scope global_vs_container
+perl "${CLAUDE_SKILL_DIR}/scripts/json-diff.pl" ~/.claude/ccpraxis/global-config/settings.json ~/.claude/ccpraxis/container-config/settings.json \
+  | perl "${CLAUDE_SKILL_DIR}/scripts/filter-diff.pl" --prefs "$HOME/.claude/ccpraxis/.backup-preferences.json" --scope global_vs_container
 ```
 
 Note: keys whose values are nested objects on both sides (like `env`, `enabledPlugins`) are expanded to dotted sub-keys (e.g., `env.DISABLE_LOGIN_COMMAND`). Present each sub-key as an individual decision.
@@ -197,7 +197,7 @@ For any choice that includes "(remember)", save the preference:
 
 ```bash
 perl "${CLAUDE_SKILL_DIR}/scripts/save-preference.pl" \
-  --prefs "$HOME/.claude/claude-code-config/.backup-preferences.json" \
+  --prefs "$HOME/.claude/ccpraxis/.backup-preferences.json" \
   --scope global_vs_container --key "<KEY>" --category "<CATEGORY>" --action "<ACTION>"
 ```
 
@@ -214,7 +214,7 @@ Map each "(remember)" option to its `--category` and `--action`:
 Before committing, run the sensitive data scanner:
 
 ```
-bash "${CLAUDE_SKILL_DIR}/scripts/sensitive-check.sh" "$HOME/.claude/claude-code-config"
+bash "${CLAUDE_SKILL_DIR}/scripts/sensitive-check.sh" "$HOME/.claude/ccpraxis"
 ```
 
 If it finds anything, show the user what was detected and **do NOT proceed** with git operations until resolved.
@@ -224,7 +224,7 @@ If it finds anything, show the user what was detected and **do NOT proceed** wit
 Only after the scan passes:
 
 ```bash
-cd "$HOME/.claude/claude-code-config"
+cd "$HOME/.claude/ccpraxis"
 git add -A
 git status
 ```
@@ -245,7 +245,7 @@ Run the plugin check script:
 
 ```bash
 perl "${CLAUDE_SKILL_DIR}/scripts/check-plugins.pl" \
-  --settings "$HOME/.claude/claude-code-config/global-config/settings.json" \
+  --settings "$HOME/.claude/ccpraxis/global-config/settings.json" \
   --installed "$HOME/.claude/plugins/installed_plugins.json" \
   --marketplaces "$HOME/.claude/plugins/known_marketplaces.json"
 ```

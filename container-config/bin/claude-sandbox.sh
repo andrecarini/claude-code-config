@@ -5,7 +5,7 @@ PROJECT_PATH="${1:-$(pwd)}"
 PROJECT_PATH="$(cd "$PROJECT_PATH" && pwd)"  # absolute path
 PROJECT_NAME="$(basename "$PROJECT_PATH" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')"
 CLAUDE_HOST_CONFIG="$HOME/.claude"
-CONTAINER_CONFIG="$CLAUDE_HOST_CONFIG/claude-code-config/container-config"
+CONTAINER_CONFIG="$CLAUDE_HOST_CONFIG/ccpraxis/container-config"
 LAUNCHER_DIR="$PROJECT_PATH/.claude-data/.launcher"
 
 # --- Auto-setup if needed ---
@@ -133,7 +133,7 @@ declare -A AVAIL_SOURCE  # name -> source label
 declare -a AVAIL_ORDER   # insertion order
 
 # Custom skills (non-host-only)
-for skill in "$CLAUDE_HOST_CONFIG/claude-code-config/skills/"*/; do
+for skill in "$CLAUDE_HOST_CONFIG/ccpraxis/skills/"*/; do
   [ -d "$skill" ] || continue
   name="$(basename "$skill")"
   if ! grep -q 'host-only: true' "$skill/SKILL.md" 2>/dev/null; then
@@ -330,7 +330,7 @@ else
     -v "$CLAUDE_HOST_CONFIG/.credentials.json:/home/claude/.claude/.credentials.json" \
     -v "$CONTAINER_CONFIG/CLAUDE.md:/home/claude/.claude/CLAUDE.md:ro" \
     -v "$CONTAINER_CONFIG/settings.json:/home/claude/.claude/settings.json:ro" \
-    -v "$CLAUDE_HOST_CONFIG/claude-code-config/scripts/statusline.pl:/home/claude/.claude/statusline.pl:ro" \
+    -v "$CLAUDE_HOST_CONFIG/ccpraxis/scripts/statusline.pl:/home/claude/.claude/statusline.pl:ro" \
     "${SKILL_MOUNTS[@]}" \
     "${EXTRA_MOUNTS[@]}" \
     claude-sandbox:latest

@@ -25,20 +25,20 @@ All file creation goes through the Perl script `todo-sync.pl` — it owns the te
 ### 1. Ensure the todo repo is ready
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl status
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl status
 ```
 
 - `STATUS: ok` → proceed
 - `STATUS: missing` → ask the user for their todo repo URL (HTTPS or SSH), then run:
   ```bash
-  perl ~/.claude/claude-code-config/scripts/todo-sync.pl init "<repo-url>"
+  perl ~/.claude/ccpraxis/scripts/todo-sync.pl init "<repo-url>"
   ```
 - `CAN_FETCH: no` → warn about connectivity but proceed with local data
 
 ### 2. Pull latest
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl sync
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl sync
 ```
 
 Only report if `STATUS: conflict`. Otherwise proceed silently.
@@ -50,7 +50,7 @@ Only report if `STATUS: conflict`. Otherwise proceed silently.
 ### Operation: `list` (default)
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl list
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl list
 ```
 
 Display the output as a formatted table. If empty, suggest `/create-todo`.
@@ -62,7 +62,7 @@ Display the output as a formatted table. If empty, suggest `/create-todo`.
 Delegate to the Perl script — the script owns the template:
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl create "$name" --title "$title" --tags "$tags" <<'EOF'
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl create "$name" --title "$title" --tags "$tags" <<'EOF'
 <content>
 EOF
 ```
@@ -70,7 +70,7 @@ EOF
 If `$1` was provided, use it as the name. Otherwise ask the user for name, content, and optional tags. After creation:
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl sync "Add: $name"
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl sync "Add: $name"
 ```
 
 ---
@@ -96,7 +96,7 @@ Read the todo file and ask the user what they want to change:
 Use the Edit tool for surgical changes to the file. After editing:
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl sync "Update: $1"
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl sync "Update: $1"
 ```
 
 ---
@@ -111,7 +111,7 @@ If confirmed:
 
 ```bash
 rm ~/.claude/custom-todos/$1.md
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl sync "Delete: $1"
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl sync "Delete: $1"
 ```
 
 ---
@@ -121,8 +121,8 @@ perl ~/.claude/claude-code-config/scripts/todo-sync.pl sync "Delete: $1"
 Mark the todo as done and archive it. The Perl script handles updating the status and moving the file to `archive/`:
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl done "$1"
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl sync "Done: $1"
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl done "$1"
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl sync "Done: $1"
 ```
 
 If `STATUS: archived`, confirm to the user that the todo was completed and archived.
