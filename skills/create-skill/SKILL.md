@@ -9,9 +9,9 @@ related:
 allowed-tools: Bash, Read, Write, Edit, AskUserQuestion, Glob, Grep
 ---
 
-Create one or more new custom skills for Claude Code, integrated with the config repo at `~/.claude/claude-code-config/`.
+Create one or more new custom skills for Claude Code, integrated with ccpraxis at `~/.claude/ccpraxis/`.
 
-All changes are made in the repo (`~/.claude/claude-code-config/skills/`), then the live symlinks in `~/.claude/skills/` are refreshed to pick up the changes (handles both real symlinks and Windows copy-fallback).
+All changes are made in the repo (`~/.claude/ccpraxis/skills/`), then the live symlinks in `~/.claude/skills/` are refreshed to pick up the changes (handles both real symlinks and Windows copy-fallback).
 
 The user should provide: `$ARGUMENTS`
 
@@ -42,7 +42,7 @@ This confirmation step is essential since the skills don't exist yet and there's
 For each parsed skill name, check:
 
 ```bash
-ls ~/.claude/claude-code-config/skills/<skill-name>/SKILL.md 2>/dev/null
+ls ~/.claude/ccpraxis/skills/<skill-name>/SKILL.md 2>/dev/null
 ```
 
 - **None exist** → proceed to Step 3.
@@ -78,7 +78,7 @@ If the user's description is vague, ask follow-up questions. Good things to clar
 Before writing anything, **read the skill writing guide** for frontmatter fields, folder structure, progressive disclosure, description writing, and style guidance:
 
 ```bash
-cat ~/.claude/claude-code-config/references/skill-writing-guide.md
+cat ~/.claude/ccpraxis/references/skill-writing-guide.md
 ```
 
 Then **present the full design to the user** and get confirmation. This includes:
@@ -107,7 +107,7 @@ Use AskUserQuestion to present the design and get approval before proceeding to 
 
 Only proceed here after the user has approved the design from Step 4.
 
-All writes go to the repo at `~/.claude/claude-code-config/skills/<skill-name>/SKILL.md`.
+All writes go to the repo at `~/.claude/ccpraxis/skills/<skill-name>/SKILL.md`.
 
 For each skill, create the directory and SKILL.md. If the design from Step 4 includes supporting files, also create them:
 
@@ -129,7 +129,7 @@ Guidelines for writing good skill bodies:
 - Include actual commands in fenced code blocks where applicable
 - Use numbered steps for sequential operations
 - Use AskUserQuestion when user input or confirmation is needed
-- Reference paths relative to `~/.claude/claude-code-config/` for config files, or relative to the project for project files
+- Reference paths relative to `~/.claude/ccpraxis/` for config files, or relative to the project for project files
 - If the skill modifies config files, it should integrate with `/backup` (i.e. changes go in the repo)
 - Keep SKILL.md under 500 lines — if approaching the limit, move reference material to supporting files and add pointers
 - Write descriptions in third person with trigger contexts (see the skill writing guide)
@@ -160,12 +160,12 @@ For each created skill:
 
 ```bash
 rm -rf ~/.claude/skills/<skill-name>
-ln -sf ~/.claude/claude-code-config/skills/<skill-name> ~/.claude/skills/<skill-name>
+ln -sf ~/.claude/ccpraxis/skills/<skill-name> ~/.claude/skills/<skill-name>
 ```
 
 ## Step 8: Update the README
 
-Read `~/.claude/claude-code-config/README.md`. There are **three places** to update per skill:
+Read `~/.claude/ccpraxis/README.md`. There are **three places** to update per skill:
 
 ### 8a: Intro bullet list
 

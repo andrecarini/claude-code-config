@@ -26,7 +26,7 @@ If no argument given, list open todos and ask which one.
 ### 1. Ensure the todo repo is ready
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl status
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl status
 ```
 
 If `STATUS: missing`, tell the user there are no todos yet and suggest `/create-todo` to get started (which will handle repo setup).
@@ -34,7 +34,7 @@ If `STATUS: missing`, tell the user there are no todos yet and suggest `/create-
 ### 2. Pull latest
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl sync
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl sync
 ```
 
 Only report if `STATUS: conflict`.
@@ -44,7 +44,7 @@ Only report if `STATUS: conflict`.
 If `$0` is provided, read `~/.claude/custom-todos/$0.md`. If it doesn't exist, list available todos:
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl list
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl list
 ```
 
 Ask the user which one they meant.
@@ -67,13 +67,13 @@ After working, update the todo file if appropriate:
 - Add notes about what was done (append to the body using Edit)
 - If the work is complete, mark done and archive via the Perl script:
   ```bash
-  perl ~/.claude/claude-code-config/scripts/todo-sync.pl done "$0"
+  perl ~/.claude/ccpraxis/scripts/todo-sync.pl done "$0"
   ```
 
 Sync the changes:
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl sync "Update: $0"
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl sync "Update: $0"
 ```
 
 ## Important

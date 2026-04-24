@@ -35,15 +35,15 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "perl \"$HOME/.claude/claude-code-config/scripts/statusline.pl\""
+    "command": "perl \"$HOME/.claude/ccpraxis/scripts/statusline.pl\""
   },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "feature-dev@claude-plugins-official": true
   },
   "alwaysThinkingEnabled": true,
+  "effortLevel": "xhigh",
   "showThinkingSummaries": true,
   "skipAutoPermissionPrompt": true,
-  "useAutoModeDuringPlan": false,
-  "effortLevel": "xhigh"
+  "useAutoModeDuringPlan": false
 }

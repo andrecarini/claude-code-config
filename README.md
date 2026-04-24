@@ -1,6 +1,10 @@
-# Claude Code Config
+# ccpraxis
 
-A custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configuration with global instructions, custom slash commands, a rich statusline, config sync tooling, and a Docker sandbox that keeps all development off your host machine.
+**PRAXIS for Claude Code** — **P**rompts, **R**ules, **A**gents, e**X**tensions, **I**ntegrations & **S**kills.
+
+A curated [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configuration: global instructions, custom slash commands, a rich statusline, bidirectional config sync, and a Docker sandbox that keeps all development off your host machine.
+
+> The name is a nod to *Deus Ex*, where Praxis kits unlock hidden capabilities in your augmentations. Same idea here — for your Claude Code install.
 
 - **Global instructions** — supply chain security rules, response style, dev tooling restrictions
 - **Custom statusline** — model, context usage, token counts, plan rate limits with reset timers
@@ -8,14 +12,23 @@ A custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configura
 - **Docker sandbox** — isolated containers with full Claude autonomy, interactive skill selection, blocked install hooks, 7-day package age minimum
 - **Config sync** — bidirectional drift detection, AI-assisted conflict merging, secret scanning
 
+## Fork, don't just clone
+
+**ccpraxis is meant to be forked.** Everything here — skills, settings, instructions — is configuration you'll want to own, tweak, and carry across machines. The recommended workflow is:
+
+1. **Fork** this repo on GitHub so you have your own copy.
+2. **Clone your fork** to `~/.claude/ccpraxis/` and wire it up (instructions below).
+3. **Customize freely** — add skills, rewrite prompts, change rules.
+4. **Pull upstream periodically** to grab new skills and fixes (see [Staying up to date](#staying-up-to-date)).
+
 ## Why the Sandbox
 
-Supply chain attacks in development dependencies are rampant. A single malicious npm `postinstall` hook or pip `setup.py` can steal credentials, SSH keys, browser sessions, and more. This config makes Claude Code refuse to run dev tooling on the host and instead run everything in isolated Docker containers with supply chain protections (blocked install hooks, 7-day minimum package age, non-root user).
+Supply chain attacks in development dependencies are rampant. A single malicious npm `postinstall` hook or pip `setup.py` can steal credentials, SSH keys, browser sessions, and more. ccpraxis makes Claude Code refuse to run dev tooling on the host and instead run everything in isolated Docker containers with supply chain protections (blocked install hooks, 7-day minimum package age, non-root user).
 
 ## What's Included
 
 ```
-claude-code-config/
+ccpraxis/
 ├── global-config/
 │   ├── CLAUDE.md                    # Global instructions (supply chain rules, response style)
 │   ├── known_marketplaces.json      # Marketplace selections (synced across machines)
@@ -71,29 +84,45 @@ Optional:
 
 ### Setup
 
-Open Claude Code and tell it:
+**Fork first, then install from your fork.** ccpraxis is configuration you'll want to own and customize — forking means your edits live in *your* repo, and you can still pull upstream updates when you want them.
 
-> Install the Claude Code config from `https://github.com/andrecarini/claude-code-config`
+1. Fork this repo on GitHub (`https://github.com/andrecarini/ccpraxis`) under your own account.
+2. Open Claude Code and tell it:
 
-Then restart Claude Code.
+    > Install ccpraxis from `https://github.com/<your-user>/ccpraxis`
+
+3. Then restart Claude Code.
+
+### Staying up to date
+
+Once installed, add this repo as an `upstream` remote so you can pull in new skills and fixes without losing your local customizations:
+
+```bash
+cd ~/.claude/ccpraxis
+git remote add upstream https://github.com/andrecarini/ccpraxis.git
+git fetch upstream
+git merge upstream/main   # or: git rebase upstream/main
+```
+
+Run `/backup` afterwards to resync your live `~/.claude/` with any settings changes.
 
 ### Instructions for Claude
 
-When asked to install this repo, follow these steps. Do **not** run npm, pip, or any dev tooling — this is a config-only repo.
+When asked to install ccpraxis, follow these steps. Do **not** run npm, pip, or any dev tooling — this is a config-only repo.
 
-**1. Clone the repo:**
+**1. Clone the user's fork (ask for the URL if not provided):**
 
 ```bash
-git clone https://github.com/andrecarini/claude-code-config.git ~/.claude/claude-code-config
+git clone <fork-url> ~/.claude/ccpraxis
 ```
 
 **2. Symlink all skills into `~/.claude/skills/`:**
 
-For each subdirectory in `~/.claude/claude-code-config/skills/`, create a symlink in `~/.claude/skills/` pointing to it. Remove any existing entry first to handle stale copies (e.g. on Windows where `ln -s` falls back to copying). This way new skills are picked up automatically.
+For each subdirectory in `~/.claude/ccpraxis/skills/`, create a symlink in `~/.claude/skills/` pointing to it. Remove any existing entry first to handle stale copies (e.g. on Windows where `ln -s` falls back to copying). This way new skills are picked up automatically.
 
 ```bash
 mkdir -p ~/.claude/skills
-for skill in ~/.claude/claude-code-config/skills/*/; do
+for skill in ~/.claude/ccpraxis/skills/*/; do
   name="$(basename "$skill")"
   rm -rf ~/.claude/skills/"$name"
   ln -sf "$skill" ~/.claude/skills/"$name"
@@ -104,7 +133,7 @@ done
 
 - If `~/.claude/CLAUDE.md` does not exist: symlink it.
   ```bash
-  ln -sf ~/.claude/claude-code-config/global-config/CLAUDE.md ~/.claude/CLAUDE.md
+  ln -sf ~/.claude/ccpraxis/global-config/CLAUDE.md ~/.claude/CLAUDE.md
   ```
 - If it already exists: read both the existing file and the repo's `global-config/CLAUDE.md`. Ask the user (via AskUserQuestion) whether to replace it with a symlink to the repo version or to merge. If merging, incorporate the repo's rules into the existing file and leave it as a regular file.
 
@@ -112,11 +141,11 @@ done
 
 - If `~/.claude/settings.json` does not exist: copy the repo version.
   ```bash
-  cp ~/.claude/claude-code-config/global-config/settings.json ~/.claude/settings.json
+  cp ~/.claude/ccpraxis/global-config/settings.json ~/.claude/settings.json
   ```
 - If it already exists: run the semantic diff to compare, then present each difference to the user interactively:
   ```bash
-  perl ~/.claude/claude-code-config/skills/backup/scripts/json-diff.pl ~/.claude/settings.json ~/.claude/claude-code-config/global-config/settings.json
+  perl ~/.claude/ccpraxis/skills/backup/scripts/json-diff.pl ~/.claude/settings.json ~/.claude/ccpraxis/global-config/settings.json
   ```
   For each key in `only_right` (in repo but not live) or `diverged` (different values), ask the user whether to adopt the repo value or keep their existing value. Keys in `only_left` (in live but not repo) are the user's own additions — keep them.
 
@@ -132,7 +161,14 @@ Read the `enabledPlugins` from `global-config/settings.json`. For each plugin, c
 /plugin install <plugin-name>@<marketplace-name>
 ```
 
-**7. Tell the user to restart Claude Code.**
+**7. Add `upstream` remote for future updates:**
+
+```bash
+cd ~/.claude/ccpraxis
+git remote add upstream https://github.com/andrecarini/ccpraxis.git
+```
+
+**8. Tell the user to restart Claude Code.**
 
 ## Features
 
@@ -172,7 +208,7 @@ Opus 4.6 1M  22% |220k 780k| 5h 15%|3h 46m|  7d 12%|4d 22h|
 
 ### Config Sync (`/backup`)
 
-Bidirectional sync between your live `~/.claude/` config and this repo:
+Bidirectional sync between your live `~/.claude/` config and your ccpraxis repo:
 
 1. Detects drift (identical, live-only, export-only, conflict, settings, marketplace, and container settings changes)
 2. Creates timestamped backups of live settings before any modifications
