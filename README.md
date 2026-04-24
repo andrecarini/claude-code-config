@@ -15,7 +15,7 @@ Supply chain attacks in development dependencies are rampant. A single malicious
 ## What's Included
 
 ```
-claude-code-config/
+ccpraxis/
 ├── global-config/
 │   ├── CLAUDE.md                    # Global instructions (supply chain rules, response style)
 │   ├── known_marketplaces.json      # Marketplace selections (synced across machines)
@@ -73,7 +73,7 @@ Optional:
 
 Open Claude Code and tell it:
 
-> Install the Claude Code config from `https://github.com/andrecarini/claude-code-config`
+> Install the Claude Code config from `https://github.com/andrecarini/ccpraxis`
 
 Then restart Claude Code.
 
@@ -84,16 +84,16 @@ When asked to install this repo, follow these steps. Do **not** run npm, pip, or
 **1. Clone the repo:**
 
 ```bash
-git clone https://github.com/andrecarini/claude-code-config.git ~/.claude/claude-code-config
+git clone https://github.com/andrecarini/ccpraxis.git ~/.claude/ccpraxis
 ```
 
 **2. Symlink all skills into `~/.claude/skills/`:**
 
-For each subdirectory in `~/.claude/claude-code-config/skills/`, create a symlink in `~/.claude/skills/` pointing to it. Remove any existing entry first to handle stale copies (e.g. on Windows where `ln -s` falls back to copying). This way new skills are picked up automatically.
+For each subdirectory in `~/.claude/ccpraxis/skills/`, create a symlink in `~/.claude/skills/` pointing to it. Remove any existing entry first to handle stale copies (e.g. on Windows where `ln -s` falls back to copying). This way new skills are picked up automatically.
 
 ```bash
 mkdir -p ~/.claude/skills
-for skill in ~/.claude/claude-code-config/skills/*/; do
+for skill in ~/.claude/ccpraxis/skills/*/; do
   name="$(basename "$skill")"
   rm -rf ~/.claude/skills/"$name"
   ln -sf "$skill" ~/.claude/skills/"$name"
@@ -104,7 +104,7 @@ done
 
 - If `~/.claude/CLAUDE.md` does not exist: symlink it.
   ```bash
-  ln -sf ~/.claude/claude-code-config/global-config/CLAUDE.md ~/.claude/CLAUDE.md
+  ln -sf ~/.claude/ccpraxis/global-config/CLAUDE.md ~/.claude/CLAUDE.md
   ```
 - If it already exists: read both the existing file and the repo's `global-config/CLAUDE.md`. Ask the user (via AskUserQuestion) whether to replace it with a symlink to the repo version or to merge. If merging, incorporate the repo's rules into the existing file and leave it as a regular file.
 
@@ -112,11 +112,11 @@ done
 
 - If `~/.claude/settings.json` does not exist: copy the repo version.
   ```bash
-  cp ~/.claude/claude-code-config/global-config/settings.json ~/.claude/settings.json
+  cp ~/.claude/ccpraxis/global-config/settings.json ~/.claude/settings.json
   ```
 - If it already exists: run the semantic diff to compare, then present each difference to the user interactively:
   ```bash
-  perl ~/.claude/claude-code-config/skills/backup/scripts/json-diff.pl ~/.claude/settings.json ~/.claude/claude-code-config/global-config/settings.json
+  perl ~/.claude/ccpraxis/skills/backup/scripts/json-diff.pl ~/.claude/settings.json ~/.claude/ccpraxis/global-config/settings.json
   ```
   For each key in `only_right` (in repo but not live) or `diverged` (different values), ask the user whether to adopt the repo value or keep their existing value. Keys in `only_left` (in live but not repo) are the user's own additions — keep them.
 

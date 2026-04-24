@@ -10,13 +10,13 @@ Prepare the current project for running Claude Code in a sandboxed Docker contai
 Do everything end-to-end — build the image, set up the project, configure git access.
 Skip any step that is already done. At the end, output the launch command.
 
-The container-config lives at `~/.claude/claude-code-config/container-config/`.
+The container-config lives at `~/.claude/ccpraxis/container-config/`.
 The container has its own CLAUDE.md and settings.json mounted by the launcher scripts — do NOT ask the user about adding container instructions to the project CLAUDE.md.
 
 ## Step 1: Verify container-config exists
 
 ```bash
-ls "$HOME/.claude/claude-code-config/container-config/Dockerfile" 2>/dev/null && echo "OK" || echo "MISSING"
+ls "$HOME/.claude/ccpraxis/container-config/Dockerfile" 2>/dev/null && echo "OK" || echo "MISSING"
 ```
 
 If MISSING, tell the user the container config repo hasn't been set up yet (they need to install it first — see the repo README) and **stop**.
@@ -24,7 +24,7 @@ If MISSING, tell the user the container config repo hasn't been set up yet (they
 Also verify the sandbox-specific `claude.json` exists (skips onboarding inside containers):
 
 ```bash
-ls "$HOME/.claude/claude-code-config/container-config/claude.json" 2>/dev/null && echo "CLAUDE_JSON_OK" || echo "CLAUDE_JSON_MISSING"
+ls "$HOME/.claude/ccpraxis/container-config/claude.json" 2>/dev/null && echo "CLAUDE_JSON_OK" || echo "CLAUDE_JSON_MISSING"
 ```
 
 If MISSING, create it:
@@ -49,7 +49,7 @@ If MISSING, build it:
 
 ```bash
 HOST_VERSION="$(claude --version 2>/dev/null | awk '{print $1}')"
-docker build --build-arg "CLAUDE_VERSION=$HOST_VERSION" -t "claude-sandbox:$HOST_VERSION" -t "claude-sandbox:latest" "$HOME/.claude/claude-code-config/container-config"
+docker build --build-arg "CLAUDE_VERSION=$HOST_VERSION" -t "claude-sandbox:$HOST_VERSION" -t "claude-sandbox:latest" "$HOME/.claude/ccpraxis/container-config"
 ```
 
 ## Step 3: Create .claude-data directory
@@ -105,7 +105,7 @@ git remote get-url origin 2>/dev/null || echo "NO_REMOTE"
 
 ## Step 6: Add `claude-sandbox` to PATH (first time only)
 
-The launcher scripts live in `~/.claude/claude-code-config/container-config/bin/` (`claude-sandbox.sh` for Linux/macOS, `claude-sandbox.ps1` for Windows). The goal is to add this `bin/` directory to PATH so the scripts are directly invocable. **Never copy launcher files elsewhere** — always add the source directory to PATH so updates propagate automatically.
+The launcher scripts live in `~/.claude/ccpraxis/container-config/bin/` (`claude-sandbox.sh` for Linux/macOS, `claude-sandbox.ps1` for Windows). The goal is to add this `bin/` directory to PATH so the scripts are directly invocable. **Never copy launcher files elsewhere** — always add the source directory to PATH so updates propagate automatically.
 
 ```bash
 command -v claude-sandbox > /dev/null 2>&1 && echo "ON_PATH" || echo "NOT_ON_PATH"
@@ -124,8 +124,8 @@ uname -s 2>/dev/null || echo "Windows"
 Make the script executable and create an extensionless symlink:
 
 ```bash
-chmod +x ~/.claude/claude-code-config/container-config/bin/claude-sandbox.sh
-ln -sf claude-sandbox.sh ~/.claude/claude-code-config/container-config/bin/claude-sandbox
+chmod +x ~/.claude/ccpraxis/container-config/bin/claude-sandbox.sh
+ln -sf claude-sandbox.sh ~/.claude/ccpraxis/container-config/bin/claude-sandbox
 ```
 
 Add `bin/` to PATH by appending to the shell profile if not already present:
@@ -133,7 +133,7 @@ Add `bin/` to PATH by appending to the shell profile if not already present:
 ```bash
 SHELL_RC="$HOME/.bashrc"
 [ -f "$HOME/.zshrc" ] && SHELL_RC="$HOME/.zshrc"
-grep -q 'claude-code-config/container-config/bin' "$SHELL_RC" 2>/dev/null || echo 'export PATH="$HOME/.claude/claude-code-config/container-config/bin:$PATH"' >> "$SHELL_RC"
+grep -q 'ccpraxis/container-config/bin' "$SHELL_RC" 2>/dev/null || echo 'export PATH="$HOME/.claude/ccpraxis/container-config/bin:$PATH"' >> "$SHELL_RC"
 ```
 
 **Windows (MINGW/MSYS):**
@@ -141,7 +141,7 @@ grep -q 'claude-code-config/container-config/bin' "$SHELL_RC" 2>/dev/null || ech
 Add the `bin/` directory to the **user-level** PATH via the Windows registry, if not already present:
 
 ```bash
-BINDIR_WIN="$(cygpath -w "$HOME/.claude/claude-code-config/container-config/bin")"
+BINDIR_WIN="$(cygpath -w "$HOME/.claude/ccpraxis/container-config/bin")"
 CURRENT_PATH="$(powershell.exe -NoProfile -Command "[Environment]::GetEnvironmentVariable('PATH','User')" | tr -d '\r')"
 if echo "$CURRENT_PATH" | grep -qi 'container-config[/\\]bin\|container-config\\\\bin'; then
   echo "ALREADY_IN_PATH"

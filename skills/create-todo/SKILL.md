@@ -27,13 +27,13 @@ If no arguments given, ask the user what they want to save.
 ### 1. Ensure the todo repo is ready
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl status
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl status
 ```
 
 - `STATUS: ok` → proceed to step 2
 - `STATUS: missing` → ask the user for their todo repo URL (HTTPS or SSH), then initialize:
   ```bash
-  perl ~/.claude/claude-code-config/scripts/todo-sync.pl init "<repo-url>"
+  perl ~/.claude/ccpraxis/scripts/todo-sync.pl init "<repo-url>"
   ```
   If init fails (auth/URL issue), report the error and let the user try a different URL.
 
@@ -42,7 +42,7 @@ perl ~/.claude/claude-code-config/scripts/todo-sync.pl status
 Sync before creating to avoid conflicts:
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl sync
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl sync
 ```
 
 Only report to the user if `STATUS: conflict`. Otherwise proceed silently.
@@ -57,7 +57,7 @@ If the user provided content in the arguments, use it. If they invoked `/create-
 Pipe content to the script. The script writes the file with the correct template — collision detection is built in:
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl create "$name" --title "$title" --tags "$tags" <<'EOF'
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl create "$name" --title "$title" --tags "$tags" <<'EOF'
 <content from user>
 EOF
 ```
@@ -68,7 +68,7 @@ EOF
 ### 4. Sync
 
 ```bash
-perl ~/.claude/claude-code-config/scripts/todo-sync.pl sync "Add: $name"
+perl ~/.claude/ccpraxis/scripts/todo-sync.pl sync "Add: $name"
 ```
 
 Only report sync issues if there's a conflict. Otherwise just confirm the todo was created and synced.

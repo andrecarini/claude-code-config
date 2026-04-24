@@ -9,9 +9,9 @@ related:
 allowed-tools: Bash, Read, Write, Edit, AskUserQuestion, Glob, Grep
 ---
 
-Update one or more existing custom skills for Claude Code, integrated with the config repo at `~/.claude/claude-code-config/`.
+Update one or more existing custom skills for Claude Code, integrated with the config repo at `~/.claude/ccpraxis/`.
 
-All changes are made in the repo (`~/.claude/claude-code-config/skills/`), then the live symlinks in `~/.claude/skills/` are refreshed to pick up the changes (handles both real symlinks and Windows copy-fallback).
+All changes are made in the repo (`~/.claude/ccpraxis/skills/`), then the live symlinks in `~/.claude/skills/` are refreshed to pick up the changes (handles both real symlinks and Windows copy-fallback).
 
 The user should provide: `$ARGUMENTS`
 
@@ -29,7 +29,7 @@ The user may specify one or more skill names. Skill names are lowercase-hyphenat
 To disambiguate: check each leading token against existing skill directories:
 
 ```bash
-ls ~/.claude/claude-code-config/skills/
+ls ~/.claude/ccpraxis/skills/
 ```
 
 Tokens that match an existing skill directory are skill names. The first token that doesn't match (or the remainder) is the change description.
@@ -39,7 +39,7 @@ Tokens that match an existing skill directory are skill names. The first token t
 For each skill name, check:
 
 ```bash
-ls ~/.claude/claude-code-config/skills/<skill-name>/SKILL.md 2>/dev/null
+ls ~/.claude/ccpraxis/skills/<skill-name>/SKILL.md 2>/dev/null
 ```
 
 - **All exist** → proceed to Step 3.
@@ -50,7 +50,7 @@ ls ~/.claude/claude-code-config/skills/<skill-name>/SKILL.md 2>/dev/null
   List the available skills to help spot typos:
 
   ```bash
-  ls ~/.claude/claude-code-config/skills/
+  ls ~/.claude/ccpraxis/skills/
   ```
 
   Continue with the skills that do exist if the user's intent is clear, or ask for clarification.
@@ -85,13 +85,13 @@ The related skills are included for **review and consistency checking** — they
 For each skill in the working set, read the full SKILL.md and any supporting files:
 
 ```bash
-cat ~/.claude/claude-code-config/skills/<skill-name>/SKILL.md
+cat ~/.claude/ccpraxis/skills/<skill-name>/SKILL.md
 ```
 
 Also read the skill writing guide for reference on best practices:
 
 ```bash
-cat ~/.claude/claude-code-config/references/skill-writing-guide.md
+cat ~/.claude/ccpraxis/references/skill-writing-guide.md
 ```
 
 Before proposing any changes, make sure you fully understand:
@@ -174,12 +174,12 @@ For each modified skill, re-link — this ensures Windows copy-fallback gets ref
 
 ```bash
 rm -rf ~/.claude/skills/<skill-name>
-ln -sf ~/.claude/claude-code-config/skills/<skill-name> ~/.claude/skills/<skill-name>
+ln -sf ~/.claude/ccpraxis/skills/<skill-name> ~/.claude/skills/<skill-name>
 ```
 
 ## Step 10: Update the README (if needed)
 
-Only update the README if the changes affect what's documented there. Read `~/.claude/claude-code-config/README.md` and check:
+Only update the README if the changes affect what's documented there. Read `~/.claude/ccpraxis/README.md` and check:
 
 ### 10a: Intro bullet list
 
