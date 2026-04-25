@@ -1,10 +1,7 @@
-# ccpraxis
-
-**PRAXIS for Claude Code** — **P**rompts, **R**ules, **A**gents, e**X**tensions, **I**ntegrations & **S**kills.
+# **PRAXIS for Claude Code**
+## **P**rompts, **R**ules, **A**gents, e**X**tensions, **I**ntegrations & **S**kills.
 
 A curated [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configuration: global instructions, custom slash commands, a rich statusline, bidirectional config sync, and a Docker sandbox that keeps all development off your host machine.
-
-> The name is a nod to *Deus Ex*, where Praxis kits unlock hidden capabilities in your augmentations. Same idea here — for your Claude Code install.
 
 - **Global instructions** — supply chain security rules, response style, dev tooling restrictions
 - **Custom statusline** — model, context usage, token counts, plan rate limits with reset timers
@@ -77,7 +74,7 @@ ccpraxis/
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started) installed
 - Git
-- Perl 5.14+ (preinstalled on macOS/Linux, included with [Git for Windows](https://gitforwindows.org/))
+- Perl 5.14+ (usually already installed on macOS/Linux, on Windows it's included with [Git for Windows](https://gitforwindows.org/))
 
 Optional:
 - **Docker** — required for the `/sandbox` containerized development feature
